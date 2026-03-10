@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fleet Command — Design System v1.2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Brand */
+  --fleet-blue:    #1E3A5F;
+  --signal-cyan:   #72e3ad;
+  --signal-text:   #0d7a4f;
+  --deep-navy:     #0F1E33;
+  --status-green:  #22C55E;
+  --alert-amber:   #F59E0B;
+  --critical-red:  #EF4444;
+
+  /* Surface */
+  --page-bg:       #F4F4F5;
+  --card-surface:  #FFFFFF;
+  --border-color:  #E0E0E0;
+  --text-primary:  #111111;
+  --text-secondary:#6B7280;
+
+  /* Sidebar — light mode: #F7F8FA; dark mode overridden below */
+  --sidebar-bg:             #F7F8FA;
+  --sidebar-logo-border:    rgba(0,0,0,0.08);
+  --sidebar-section:        rgba(0,0,0,0.35);
+  --sidebar-item:           rgba(0,0,0,0.52);
+  --sidebar-item-hover-bg:  rgba(0,0,0,0.04);
+  --sidebar-item-hover:     rgba(0,0,0,0.82);
+  --sidebar-active-bg:      var(--signal-cyan);
+  --sidebar-active-border:  transparent;
+  --sidebar-active:         #0F1E33;
+  --sidebar-divider:        rgba(0,0,0,0.08);
+
+  /* Fonts */
+  --font-ui:      'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Space Grotesk', sans-serif;
+
+  /* Spacing */
+  --xs: 4px; --sm: 8px; --md: 16px; --lg: 24px; --xl: 32px; --2xl: 48px;
+
+  /* Radius */
+  --r-card: 12px; --r-btn: 8px; --r-badge: 20px; --r-chip: 6px;
+
+  /* Shadow */
+  --shadow-card:   0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-raised: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-drawer: -8px 0 40px rgba(0,0,0,0.14);
+
+  /* Transitions */
+  --t-fast: 140ms ease; --t-base: 200ms ease; --t-slow: 280ms ease; --t-chart: 300ms ease-out;
+
+  /* Layout */
+  --sidebar-w: 220px; --sidebar-collapsed-w: 56px; --topbar-h: 56px;
+}
+[data-theme="dark"] {
+  --logo-dark-fill: #A3B8D0;
+  --page-bg:       #121212;
+  --card-surface:  #171717;
+  --border-color:  #292929;
+  --text-primary:  #F0F0F0;
+  --text-secondary:#9A9A9A;
+  --signal-cyan:   #4ade80;
+  --signal-text:   #4ade80;
+  --shadow-card:   0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-raised: 0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+  --sidebar-bg:             #1A1A1A;
+  --sidebar-logo-border:    rgba(255,255,255,0.08);
+  --sidebar-section:        rgba(255,255,255,0.22);
+  --sidebar-item:           rgba(255,255,255,0.50);
+  --sidebar-item-hover-bg:  rgba(255,255,255,0.05);
+  --sidebar-item-hover:     rgba(255,255,255,0.85);
+  --sidebar-active-bg:      #4ade80;
+  --sidebar-active-border:  transparent;
+  --sidebar-active:         #0F1E33;
+  --sidebar-divider:        rgba(255,255,255,0.07);
+}
+
+/* ============================================================ RESET ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  transition: background var(--t-base), color var(--t-base);
+  min-height: 100vh;
+}
+
+/* ============================================================ LAYOUT ============================================================ */
+.ds-layout { display: flex; min-height: 100vh; }
+
+.ds-sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: none;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.06), 1px 0 0 rgba(0,0,0,0.04);
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto; display: flex; flex-direction: column;
+  scrollbar-width: none;
+  transition: background var(--t-base), box-shadow var(--t-base);
+}
+.ds-sidebar::-webkit-scrollbar { display: none; }
+
+.ds-sidebar-logo {
+  padding: 20px; height: 56px;
+  display: flex; align-items: center; gap: var(--sm);
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 32px; height: 32px; }
+.logo-text { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.logo-sub { font-size: 9px; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.ds-sidebar-section {
+  padding: 14px 18px 3px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--sidebar-section);
+}
+.ds-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 var(--md); height: 44px;
+  font-size: 13px; font-weight: 500; color: var(--sidebar-item);
+  text-decoration: none;
+  transition: all var(--t-fast); cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.ds-nav-item:hover { color: var(--sidebar-item-hover); background: var(--sidebar-item-hover-bg); }
+.ds-nav-item.active {
+  color: #0F1E33;
+  background: var(--signal-cyan);
+  border-left: 3px solid transparent;
+  padding-left: calc(var(--md) - 3px);
+  font-weight: 600;
+  border-radius: var(--r-btn);
+  margin: 1px 8px;
+}
+.ds-nav-item svg { width: 16px; height: 16px; opacity: 0.6; flex-shrink: 0; }
+.ds-nav-item:hover svg { opacity: 0.85; }
+.ds-nav-item.active svg { opacity: 1; color: #0F1E33; }
+.ds-sidebar-divider { height: 1px; background: var(--border-color); margin: var(--xs) var(--md); }
+.ds-sidebar-version {
+  margin-top: auto; padding: var(--md);
+  font-size: 10px; color: var(--text-secondary);
+  opacity: 0.55;
+  border-top: 1px solid var(--border-color); line-height: 1.7;
+}
+
+/* Dark mode — sidebar reverts to charcoal */
+[data-theme="dark"] .ds-sidebar {
+  background: #1A1A1A;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.28), 1px 0 0 rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .ds-sidebar-logo { border-bottom: none; }
+[data-theme="dark"] .logo-mark path:not(:first-child) { fill: #A3B8D0; }
+[data-theme="dark"] .logo-text { color: #fff; }
+[data-theme="dark"] .logo-sub { color: rgba(255,255,255,0.35); opacity: 1; }
+[data-theme="dark"] .ds-sidebar-section { color: rgba(255,255,255,0.25); }
+[data-theme="dark"] .ds-nav-item { color: rgba(255,255,255,0.55); }
+[data-theme="dark"] .ds-nav-item:hover { color: rgba(255,255,255,0.88); background: rgba(255,255,255,0.05); }
+[data-theme="dark"] .ds-nav-item.active { color: #0F1E33; background: #4ade80; border-left-color: transparent; font-weight: 600; }
+[data-theme="dark"] .ds-nav-item svg { opacity: 0.75; }
+[data-theme="dark"] .ds-nav-item.active svg { color: #0F1E33; opacity: 1; }
+[data-theme="dark"] .ds-sidebar-divider { background: rgba(255,255,255,0.07); }
+[data-theme="dark"] .ds-sidebar-version { color: rgba(255,255,255,0.2); opacity: 1; border-top-color: rgba(255,255,255,0.07); }
+
+/* ============================================================ MAIN ============================================================ */
+.ds-main { flex: 1; min-width: 0; padding: var(--2xl) var(--2xl) var(--2xl) var(--xl); max-width: 1100px; }
+
+/* ============================================================ TOPBAR ============================================================ */
+.ds-topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--card-surface);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 var(--2xl); height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(8px);
+  transition: background var(--t-base), border-color var(--t-base);
+  margin: calc(-1 * var(--2xl)) calc(-1 * var(--2xl)) var(--2xl) calc(-1 * var(--xl));
+  width: calc(100% + var(--xl) + var(--2xl));
+}
+.ds-topbar-title {
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.ds-topbar-right { display: flex; align-items: center; gap: var(--md); }
+.ds-version-badge {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--page-bg); border: 1px solid var(--border-color);
+  border-radius: var(--r-chip); padding: 2px 8px; color: var(--text-secondary);
+  transition: background var(--t-base), border-color var(--t-base);
+}
+.theme-toggle {
+  width: 48px; height: 26px; border-radius: 13px;
+  background: var(--fleet-blue); border: none; cursor: pointer; position: relative;
+  transition: background var(--t-fast);
+}
+[data-theme="dark"] .theme-toggle { background: var(--signal-cyan); }
+.theme-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform var(--t-fast);
+}
+[data-theme="dark"] .theme-toggle::after { transform: translateX(22px); }
+.theme-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+/* ============================================================ SECTION ============================================================ */
+.ds-section { margin-bottom: var(--2xl); animation: fadeUp 0.4s ease both; }
+.ds-section-header {
+  display: flex; align-items: center; gap: var(--sm);
+  margin-bottom: var(--md); padding-bottom: var(--md);
+  border-bottom: 1px solid var(--border-color);
+}
+.ds-section-number { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--signal-text); letter-spacing: 0.06em; background: rgba(114,227,173,0.18); padding: 2px 7px; border-radius: var(--r-chip); }
+.ds-section-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.ds-section-desc { font-size: 13px; color: var(--text-secondary); margin-top: var(--xs); margin-bottom: var(--xl); line-height: 1.65; max-width: 680px; }
+
+/* ============================================================ HERO ============================================================ */
+.ds-hero { padding: var(--2xl) 0 var(--xl); border-bottom: 1px solid var(--border-color); margin-bottom: var(--2xl); }
+.ds-hero-eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--signal-text); margin-bottom: var(--sm); }
+.ds-hero-title { font-family: var(--font-display); font-size: 42px; font-weight: 700; color: var(--text-primary); line-height: 1.05; letter-spacing: -0.02em; }
+.ds-hero-title span { color: var(--signal-text); }
+
+.ds-hero-logo-row { display: flex; align-items: center; gap: var(--lg); }
+.ds-hero-logo { flex-shrink: 0; }
+.ds-hero-logo svg { display: block; }
+.ds-hero-sub { font-size: 15px; color: var(--text-secondary); margin-top: var(--sm); max-width: 540px; line-height: 1.65; }
+.ds-hero-meta { display: flex; flex-wrap: wrap; gap: var(--lg); margin-top: var(--lg); }
+.ds-hero-meta-item { display: flex; flex-direction: column; gap: 2px; }
+.ds-hero-meta-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); }
+.ds-hero-meta-value { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); }
+
+/* ============================================================ COLOR ============================================================ */
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: var(--md); }
+.color-swatch {
+  border-radius: var(--r-card); overflow: hidden;
+  border: 1px solid var(--border-color);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+.color-swatch:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
+.color-swatch-preview { height: 80px; width: 100%; }
+.color-swatch-info { background: var(--card-surface); padding: var(--md) var(--md); transition: background var(--t-base); }
+.color-swatch-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.color-swatch-hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.group-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: var(--sm); }
+
+/* ============================================================ TYPOGRAPHY ============================================================ */
+.type-scale { display: flex; flex-direction: column; }
+.type-row {
+  display: flex; align-items: baseline; gap: var(--lg);
+  padding: var(--md) 0; border-bottom: 1px solid var(--border-color);
+}
+.type-row:last-child { border-bottom: none; }
+.type-meta { width: 168px; flex-shrink: 0; }
+.type-meta-role { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.type-meta-spec { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); margin-top: 3px; }
+.type-specimen { flex: 1; color: var(--text-primary); }
+
+/* ============================================================ BADGES ============================================================ */
+.badge-row { display: flex; flex-wrap: wrap; gap: var(--sm); align-items: center; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: var(--r-badge); padding: 2px 10px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.3;
+}
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.badge-active   { background:#DCFCE7; color:#15803D; }
+.badge-active::before { background:#15803D; }
+[data-theme="dark"] .badge-active { background:rgba(34,197,94,0.14); color:#4ADE80; }
+[data-theme="dark"] .badge-active::before { background:#4ADE80; }
+
+.badge-inshop   { background:#FEF3C7; color:#B45309; }
+.badge-inshop::before { background:#B45309; }
+[data-theme="dark"] .badge-inshop { background:rgba(245,158,11,0.14); color:#FCD34D; }
+[data-theme="dark"] .badge-inshop::before { background:#FCD34D; }
+
+.badge-oos      { background:#FEE2E2; color:#B91C1C; }
+.badge-oos::before { background:#DC2626; animation: pulse-ring 2s infinite; }
+[data-theme="dark"] .badge-oos { background:rgba(239,68,68,0.14); color:#F87171; }
+[data-theme="dark"] .badge-oos::before { background:#F87171; }
+
+.badge-inactive { background:#F1F5F9; color:#64748B; }
+.badge-inactive::before { background:#94A3B8; }
+[data-theme="dark"] .badge-inactive { background:rgba(100,116,139,0.14); color:#94A3B8; }
+[data-theme="dark"] .badge-inactive::before { background:#64748B; }
+
+.badge-enroute  { background:#EFF6FF; color:#1D4ED8; }
+.badge-enroute::before { background:#1D4ED8; }
+[data-theme="dark"] .badge-enroute { background:rgba(114,227,173,0.14); color:#4ade80; }
+[data-theme="dark"] .badge-enroute::before { background:#4ade80; }
+
+@keyframes pulse-ring {
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+  50%      { box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
+/* ============================================================ KPI ============================================================ */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--md); }
+.kpi-card {
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: var(--r-card); padding: var(--lg);
+  box-shadow: var(--shadow-card);
+  transition: background var(--t-base), border-color var(--t-base), transform var(--t-fast), box-shadow var(--t-fast);
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
+.kpi-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.kpi-value { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--text-primary); line-height: 1.15; margin: var(--xs) 0 4px; }
+.kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 500; }
+.kpi-trend.up { color: var(--status-green); }
+.kpi-trend.down { color: var(--critical-red); }
+.kpi-trend.neutral { color: var(--text-secondary); }
+.kpi-breakdown {
+  display: flex; gap: var(--md); margin-top: var(--sm);
+  padding-top: var(--sm); border-top: 1px solid var(--border-color);
+}
+.kpi-breakdown-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.kpi-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ============================================================ BUTTONS ============================================================ */
+.btn-showcase { display: flex; flex-wrap: wrap; gap: var(--sm); align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sm);
+  font-family: var(--font-ui); font-size: 14px; font-weight: 600;
+  border-radius: var(--r-btn); padding: 0 var(--md); height: 36px;
+  border: none; cursor: pointer;
+  transition: all var(--t-fast); text-decoration: none; white-space: nowrap;
+}
+.btn-primary { background: var(--signal-cyan); color: #0F1E33; }
+.btn-primary:hover { background: #55d4a0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(114,227,173,0.45); }
+.btn-secondary { background: var(--card-surface); color: var(--text-primary); border: 1px solid var(--border-color); }
+.btn-secondary:hover { background: var(--page-bg); border-color: var(--slate-gray); }
+.btn-ghost { background: transparent; color: var(--signal-text); border: 1px solid rgba(13,122,79,0.25); }
+.btn-ghost:hover { background: rgba(114,227,173,0.12); border-color: rgba(13,122,79,0.4); }
+.btn-danger { background: var(--critical-red); color: #fff; }
+.btn-danger:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239,68,68,0.35); }
+.btn-icon { width: 36px; height: 36px; padding: 0; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: var(--r-btn); }
+.btn-icon:hover { background: var(--page-bg); color: var(--text-primary); }
+
+/* ============================================================ TABLE ============================================================ */
+.table-wrapper { border-radius: var(--r-card); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-card); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead tr { background: var(--page-bg); border-bottom: 1px solid var(--border-color); }
+th { text-align: left; padding: var(--sm) var(--md); font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; }
+tbody tr { background: var(--card-surface); border-bottom: 1px solid var(--border-color); transition: background var(--t-fast); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--page-bg); }
+td { padding: 12px var(--md); color: var(--text-primary); vertical-align: middle; }
+td.mono { font-family: var(--font-mono); font-size: 13px; color: var(--signal-text); }
+td.dim  { color: var(--text-secondary); font-size: 13px; }
+
+/* ============================================================ CARD ============================================================ */
+.card {
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: var(--r-card); padding: var(--lg);
+  box-shadow: var(--shadow-card);
+  transition: background var(--t-base), border-color var(--t-base);
+}
+.card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.card-subtitle { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-top: var(--xs); }
+
+/* ============================================================ SPACING ============================================================ */
+.spacing-scale { display: flex; flex-direction: column; gap: var(--sm); }
+.spacing-row { display: flex; align-items: center; gap: var(--md); }
+.spacing-token { font-family: var(--font-mono); font-size: 12px; color: var(--signal-text); width: 36px; flex-shrink: 0; }
+.spacing-bar { height: 16px; background: var(--fleet-blue); border-radius: 4px; }
+[data-theme="dark"] .spacing-bar { background: var(--signal-cyan); opacity: 0.6; }
+.spacing-value { font-size: 12px; color: var(--text-secondary); width: 44px; flex-shrink: 0; }
+.spacing-usage { font-size: 12px; color: var(--text-secondary); }
+
+/* ============================================================ SIDEBAR DEMO ============================================================ */
+/* CONVENTION: Light mode sidebar is #F7F8FA with box-shadow (no border).
+   Dark mode sidebar is charcoal grey (#1A1A1A) with box-shadow.
+   Active state: inverted pill — signal-cyan bg fill + #0F1E33 text. 10.1:1 AAA. */
+.sidebar-demos { display: flex; gap: var(--lg); flex-wrap: wrap; }
+.sidebar-demo {
+  width: 240px;
+  border-radius: var(--r-card); overflow: hidden;
+  box-shadow: var(--shadow-raised);
+}
+.sidebar-demo.light-variant { background: #F7F8FA; }
+.sidebar-demo.dark-variant  { background: #1A1A1A; }
+
+/* — light variant — */
+/* sdl-mark now uses inline SVG, no background needed */
+.sidebar-demo.light-variant .sdl-name { color: #111111; }
+.sidebar-demo.light-variant .sdl-sub  { color: rgba(0,0,0,0.35); }
+.sidebar-demo.light-variant .sidebar-demo-section { color: rgba(0,0,0,0.35); }
+.sidebar-demo.light-variant .sidebar-demo-item { color: rgba(0,0,0,0.52); }
+.sidebar-demo.light-variant .sidebar-demo-item:hover { color: rgba(0,0,0,0.82); background: rgba(0,0,0,0.04); }
+.sidebar-demo.light-variant .sidebar-demo-item.active { color: #0F1E33; background: #72e3ad; border-left-color: transparent; font-weight: 600; border-radius: 8px; margin: 1px 8px; padding-left: 13px; }
+.sidebar-demo.light-variant .sidebar-demo-item.active svg { color: #0F1E33; opacity: 1; }
+.sidebar-demo.light-variant .sidebar-divider { background: rgba(0,0,0,0.08); }
+
+/* — dark variant — */
+/* sdl-mark dark: inline SVG has white paths */
+.sidebar-demo.dark-variant .sdl-name { color: #fff; }
+.sidebar-demo.dark-variant .sdl-sub  { color: rgba(255,255,255,0.35); }
+.sidebar-demo.dark-variant .sidebar-demo-section { color: rgba(255,255,255,0.22); }
+.sidebar-demo.dark-variant .sidebar-demo-item { color: rgba(255,255,255,0.50); }
+.sidebar-demo.dark-variant .sidebar-demo-item:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.05); }
+.sidebar-demo.dark-variant .sidebar-demo-item.active { color: #0F1E33; background: #4ade80; border-left-color: transparent; font-weight: 600; border-radius: 8px; margin: 1px 8px; padding-left: 13px; }
+.sidebar-demo.dark-variant .sidebar-demo-item.active svg { color: #0F1E33; opacity: 1; }
+.sidebar-demo.dark-variant .sidebar-divider { background: rgba(255,255,255,0.07); }
+
+.sidebar-demo-logo {
+  padding: 0 20px; height: 56px;
+  display: flex; align-items: center; gap: var(--sm);
+}
+.sdl-mark { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sdl-mark svg { width: 32px; height: 32px; }
+.sdl-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; }
+.sdl-sub  { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; display: block; }
+.sidebar-demo-section { padding: 14px 18px 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.sidebar-demo-item { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 44px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--t-fast); border-left: 3px solid transparent; }
+.sidebar-demo-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.6; }
+.sidebar-demo-item:hover svg { opacity: 0.85; }
+.sidebar-divider { height: 1px; margin: 4px 18px; }
+
+/* ============================================================ SKELETON ============================================================ */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--page-bg) 50%, var(--border-color) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+.skeleton-card { background: var(--card-surface); border: 1px solid var(--border-color); border-radius: var(--r-card); padding: var(--lg); box-shadow: var(--shadow-card); }
+.skel-line { height: 12px; margin-bottom: 8px; }
+.skel-title { height: 28px; width: 60%; margin-bottom: 12px; }
+.skel-badge { height: 20px; width: 80px; border-radius: 20px; }
+
+/* ============================================================ CHART PREVIEW ============================================================ */
+.chart-preview {
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: var(--r-card); padding: var(--lg);
+  box-shadow: var(--shadow-card);
+}
+.chart-bars {
+  height: 120px; display: flex; align-items: flex-end;
+  gap: 5px; overflow: hidden;
+}
+.chart-bar {
+  flex: 1; border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, var(--signal-cyan), rgba(114,227,173,0.3));
+  animation: barGrow 0.5s ease-out both;
+}
+@keyframes barGrow { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
+.chart-bar:hover { opacity: 0.7; transition: opacity var(--t-fast); }
+.chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--md); }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.chart-meta  { font-size: 11px; color: var(--text-secondary); }
+
+/* ============================================================ ICON GRID ============================================================ */
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--sm); }
+.icon-item {
+  display: flex; flex-direction: column; align-items: center; gap: var(--sm);
+  padding: var(--md); background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: var(--r-card); transition: all var(--t-fast); cursor: default;
+}
+.icon-item:hover { border-color: var(--signal-cyan); background: rgba(114,227,173,0.04); }
+.icon-item svg { color: var(--text-secondary); transition: color var(--t-fast); }
+.icon-item:hover svg { color: var(--signal-cyan); }
+.icon-item-name { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1.4; }
+
+/* ============================================================ DO / DON'T ============================================================ */
+.dos-donts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--md); }
+.dos-card { background: rgba(34,197,94,0.04); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--r-card); padding: var(--xl); }
+.donts-card { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15); border-radius: var(--r-card); padding: var(--xl); }
+.dos-title { font-weight: 700; font-size: 13px; color: var(--status-green); margin-bottom: var(--md); }
+.donts-title { font-weight: 700; font-size: 13px; color: var(--critical-red); margin-bottom: var(--md); }
+.rule-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.rule-list li { font-size: 13px; color: var(--text-primary); display: flex; gap: var(--sm); line-height: 1.5; }
+.rule-list li::before { flex-shrink: 0; margin-top: 1px; font-weight: 700; }
+.dos-card   .rule-list li::before { content: '✓'; color: var(--status-green); }
+.donts-card .rule-list li::before { content: '✕'; color: var(--critical-red); }
+
+/* ============================================================ DARK MODE TABLE ============================================================ */
+.dm-table { width: 100%; font-size: 13px; }
+.dm-table th { text-align: left; padding: 6px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.dm-table td { padding: 8px 12px; color: var(--text-primary); border-bottom: 1px solid var(--border-color); }
+.dm-table tr:last-child td { border-bottom: none; }
+
+/* ============================================================ UTILITY ============================================================ */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lg); align-items: start; }
+.three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lg); }
+.mb-sm { margin-bottom: var(--sm); }
+.mb-md { margin-bottom: var(--md); }
+.mb-lg { margin-bottom: var(--lg); }
+
+/* ============================================================ ANIMATION ============================================================ */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.ds-section:nth-child(1)  { animation-delay:   0ms; }
+.ds-section:nth-child(2)  { animation-delay:  60ms; }
+.ds-section:nth-child(3)  { animation-delay: 120ms; }
+.ds-section:nth-child(4)  { animation-delay: 180ms; }
+.ds-section:nth-child(5)  { animation-delay: 240ms; }
+.ds-section:nth-child(6)  { animation-delay: 300ms; }
+.ds-section:nth-child(7)  { animation-delay: 360ms; }
+.ds-section:nth-child(8)  { animation-delay: 420ms; }
+.ds-section:nth-child(9)  { animation-delay: 480ms; }
+.ds-section:nth-child(10) { animation-delay: 540ms; }
+.ds-section:nth-child(11) { animation-delay: 600ms; }
+.ds-section:nth-child(12) { animation-delay: 660ms; }
+.ds-section:nth-child(13) { animation-delay: 720ms; }
+
+@media (max-width: 900px) {
+  .ds-sidebar { display: none; }
+  .ds-main { padding: var(--lg); }
+  .two-col, .three-col, .dos-donts { grid-template-columns: 1fr; }
+}
+
+/* ============================================================ MAP ============================================================ */
+.map-wrapper {
+  border-radius: var(--r-btn); overflow: hidden;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+#fleet-map { height: 420px; width: 100%; background: var(--card-surface); }
+.map-legend {
+  position: absolute; bottom: 20px; left: 20px; z-index: 1000;
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: 10px; padding: var(--sm) var(--md); box-shadow: var(--shadow-raised);
+  display: flex; flex-direction: column; gap: 6px; min-width: 150px;
+  transition: background var(--t-base), border-color var(--t-base);
+}
+.map-legend-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+.map-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.map-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+.map-controls {
+  position: absolute; top: 16px; right: 16px; z-index: 1000;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.map-ctrl-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  color: var(--text-primary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast); font-size: 16px; font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+.map-ctrl-btn:hover { background: var(--page-bg); border-color: var(--signal-text); color: var(--signal-text); }
+/* Override leaflet tile layer for light/dark compatibility */
+.leaflet-tile-pane { filter: none; }
+[data-theme="dark"] .leaflet-tile-pane { filter: brightness(0.85) contrast(1.05) saturate(0.6) hue-rotate(180deg) invert(1); }
+.leaflet-container { font-family: var(--font-ui); }
+.leaflet-popup-content-wrapper {
+  background: var(--card-surface); color: var(--text-primary);
+  border: 1px solid var(--border-color); border-radius: 10px;
+  box-shadow: var(--shadow-raised); padding: 0;
+}
+.leaflet-popup-content { margin: 0; }
+.leaflet-popup-tip { background: var(--card-surface); }
+.fleet-popup { padding: var(--sm) var(--md); min-width: 150px; }
+.fleet-popup-id { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--signal-text); }
+.fleet-popup-driver { font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 3px 0 2px; }
+.fleet-popup-loc { font-size: 11px; color: var(--text-secondary); }
+.map-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--md);
+  margin-bottom: var(--md);
+}
+.map-stat {
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: var(--r-card); padding: var(--md) var(--lg);
+  box-shadow: var(--shadow-card); transition: background var(--t-base), border-color var(--t-base);
+}
+.map-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.map-stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-top: 2px; }
+.map-stat-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+/* ============================================================ FORM CONTROLS ============================================================ */
+.fc-field { display: flex; flex-direction: column; gap: 5px; }
+.fc-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.fc-input {
+  width: 100%; height: 36px; border-radius: var(--r-btn);
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  padding: 0 12px; font-family: var(--font-ui); font-size: 14px; color: var(--text-primary);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  outline: none;
+}
+.fc-input::placeholder { color: var(--text-secondary); opacity: 0.6; }
+.fc-input:focus { border-color: var(--signal-cyan); box-shadow: 0 0 0 3px rgba(114,227,173,0.18); }
+.fc-input[type="date"] { cursor: pointer; }
+.fc-input-hint { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+.fc-input-error { font-size: 11px; color: var(--critical-red); margin-top: 3px; }
+
+/* Custom dropdown trigger */
+.fc-select { position: relative; display: block; width: 100%; }
+.fc-select-trigger {
+  width: 100%; height: 36px; border-radius: var(--r-btn);
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  padding: 0 36px 0 12px; font-family: var(--font-ui); font-size: 14px; color: var(--text-primary);
+  display: flex; align-items: center; cursor: pointer; user-select: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  position: relative; gap: 8px;
+}
+.fc-select-trigger:hover { border-color: rgba(114,227,173,0.5); }
+.fc-select-trigger.open { border-color: var(--signal-cyan); box-shadow: 0 0 0 3px rgba(114,227,173,0.18); }
+.fc-select-trigger > span { flex: 1; }
+.fc-select-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: var(--text-secondary);
+  transition: transform var(--t-fast); flex-shrink: 0;
+}
+.fc-select-trigger.open .fc-select-arrow { transform: translateY(-50%) rotate(180deg); }
+
+/* Dropdown panel */
+.fc-dropdown-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+  background: var(--card-surface); border: 1px solid var(--border-color);
+  border-radius: 10px; box-shadow: var(--shadow-raised);
+  overflow: hidden; animation: dropdownOpen 140ms ease;
+}
+@keyframes dropdownOpen {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[data-theme="dark"] .fc-dropdown-panel { background: #1e1e1e; border-color: #333; }
+
+/* Dropdown search box */
+.fc-dropdown-search { padding: 8px; border-bottom: 1px solid var(--border-color); }
+.fc-dropdown-search input {
+  width: 100%; height: 30px; border-radius: 6px;
+  background: var(--page-bg); border: 1px solid var(--border-color);
+  padding: 0 10px 0 28px; font-family: var(--font-ui); font-size: 13px; color: var(--text-primary);
+  outline: none; transition: border-color var(--t-fast);
+}
+.fc-dropdown-search input:focus { border-color: var(--signal-cyan); }
+.fc-dropdown-search input::placeholder { color: var(--text-secondary); opacity: 0.7; }
+.fc-dropdown-search { position: relative; }
+.fc-dropdown-search::before {
+  content: ''; position: absolute; left: 17px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: contain;
+}
+
+/* Dropdown list */
+.fc-dropdown-list { max-height: 224px; overflow-y: auto; padding: 4px 0; scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
+.fc-dropdown-list::-webkit-scrollbar { width: 4px; }
+.fc-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+.fc-dropdown-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+.fc-dropdown-item {
+  display: flex; align-items: center;
+  padding: 0 12px; height: 36px; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--text-primary);
+  cursor: pointer; transition: background var(--t-fast);
+}
+.fc-dropdown-item > .fc-dropdown-item-label { flex: 1; }
+.fc-dropdown-item > .fc-dropdown-item-sub { font-size: 11px; color: var(--text-secondary); flex-shrink: 0; }
+.fc-dropdown-item:hover { background: var(--page-bg); }
+.fc-dropdown-item.selected { background: rgba(114,227,173,0.10); color: var(--signal-text); }
+.fc-dropdown-check { color: var(--signal-text); flex-shrink: 0; }
+
+/* Dropdown section header */
+.fc-dropdown-group {
+  padding: 8px 12px 3px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.fc-dropdown-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
+
+/* ── Multi-select checkbox ── */
+.fc-multi-check {
+  width: 15px; height: 15px; border-radius: 3px;
+  border: 1.5px solid var(--border-color); background: var(--card-surface);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background var(--t-fast), border-color var(--t-fast);
+}
+.fc-multi-check.checked {
+  background: var(--signal-cyan); border-color: var(--signal-cyan);
+}
+.fc-multi-check.checked::after {
+  content: ''; display: block; width: 9px; height: 7px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='7' viewBox='0 0 9 7' fill='none'%3E%3Cpolyline points='1 3.5 3.5 6 8 1' stroke='%230F1E33' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: contain;
+}
+[data-theme="dark"] .fc-multi-check { background: #2a2a2a; border-color: #444; }
+
+/* ── Count badge on multi-select trigger ── */
+.fc-select-count {
+  min-width: 18px; height: 18px; border-radius: 9px;
+  background: var(--signal-cyan); color: var(--deep-navy);
+  font-size: 10px; font-weight: 700; font-family: var(--font-ui);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px; flex-shrink: 0;
+}
+
+/* ── Dropdown footer (multi-select apply/clear row) ── */
+.fc-dropdown-footer {
+  padding: 6px 8px; border-top: 1px solid var(--border-color);
+  display: flex; justify-content: flex-end; align-items: center; gap: 5px;
+}
+.fc-dropdown-footer-count { font-size: 11px; color: var(--text-secondary); flex: 1; }
+.fc-btn-clear {
+  height: 26px; padding: 0 9px; font-size: 12px; font-family: var(--font-ui);
+  background: transparent; color: var(--text-secondary); border: none;
+  border-radius: 5px; cursor: pointer; transition: color var(--t-fast);
+}
+.fc-btn-clear:hover { color: var(--text-primary); }
+.fc-btn-apply {
+  height: 26px; padding: 0 12px; font-size: 12px; font-family: var(--font-ui);
+  background: var(--signal-cyan); color: var(--deep-navy); font-weight: 600;
+  border: none; border-radius: 5px; cursor: pointer; transition: opacity var(--t-fast);
+}
+.fc-btn-apply:hover { opacity: 0.85; }
+
+/* Avatar chip */
+.fc-avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+/* Form section animation */
+.ds-section:nth-child(14) { animation-delay: 780ms; }
+.ds-section:nth-child(15) { animation-delay: 840ms; }
+</style>
+</head>
+<body>
+<div class="ds-layout">
+
+<!-- ═══════════════════════════════════════════ SIDEBAR ═══════════════════════════════════════════ -->
+<aside class="ds-sidebar">
+  <div class="ds-sidebar-logo">
+    <div class="logo-mark">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/>
+          <path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/>
+          <path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/>
+          <path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/>
+        </svg>
+      </div>
+    <div>
+      <div class="logo-text">Fleet Command</div>
+      <div class="logo-sub">Design System</div>
+    </div>
+  </div>
+
+  <div class="ds-sidebar-section">Foundations</div>
+  <a href="#brand"     class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Brand & Logo</a>
+  <a href="#colors"     class="ds-nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20"/></svg>Colors</a>
+  <a href="#typography" class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>Typography</a>
+  <a href="#spacing"    class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9h16M4 15h16M9 4v16M15 4v16"/></svg>Spacing</a>
+  <a href="#icons"      class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Iconography</a>
+
+  <div class="ds-sidebar-divider"></div>
+  <div class="ds-sidebar-section">Components</div>
+  <a href="#badges"  class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>Status Badges</a>
+  <a href="#kpi"     class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="8" width="6" height="13" rx="1"/><rect x="16" y="5" width="6" height="16" rx="1"/></svg>KPI Cards</a>
+  <a href="#buttons" class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="8" rx="4"/></svg>Buttons</a>
+  <a href="#table"   class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h18M3 12h18M3 19h18M8 5v14M16 5v14"/></svg>Data Table</a>
+  <a href="#nav"     class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="11" y="3" width="10" height="8" rx="1"/><rect x="11" y="13" width="10" height="8" rx="1"/></svg>Navigation</a>
+  <a href="#charts"  class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Charts</a>
+  <a href="#map"     class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Live Map</a>
+
+  <div class="ds-sidebar-divider"></div>
+  <div class="ds-sidebar-section">Patterns</div>
+  <a href="#motion"   class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>Motion</a>
+  <a href="#darkmode" class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Dark Mode</a>
+  <a href="#forms"    class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="4" rx="2"/><rect x="3" y="12" width="9" height="4" rx="2"/><rect x="14" y="12" width="7" height="4" rx="2"/><rect x="3" y="19" width="18" height="1" rx="0.5"/></svg>Form Controls</a>
+  <a href="#rules"    class="ds-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Rules</a>
+
+  <div class="ds-sidebar-version">Design System v1.2<br>Fleet Command Platform<br>March 2026</div>
+</aside>
+
+<!-- ═══════════════════════════════════════════ MAIN ═══════════════════════════════════════════ -->
+<main class="ds-main">
+
+  <!-- TOPBAR -->
+  <div class="ds-topbar">
+    <span class="ds-topbar-title">Fleet Command — Design System</span>
+    <div class="ds-topbar-right">
+      <span class="ds-version-badge">v1.3</span>
+      <span class="theme-label" id="theme-label">Light</span>
+      <button class="theme-toggle" id="theme-btn" aria-label="Toggle dark mode" onclick="toggleTheme()"></button>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="ds-hero">
+    <div class="ds-hero-logo-row">
+      <div class="ds-hero-logo">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/>
+            <path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="var(--logo-dark-fill, #0F182A)"/>
+            <path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="var(--logo-dark-fill, #0F182A)"/>
+            <path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="var(--logo-dark-fill, #0F182A)"/>
+          </svg>
+      </div>
+      <div>
+        <div class="ds-hero-eyebrow">Design System · v1.2 · Auto Fleet Management</div>
+        <h1 class="ds-hero-title">Fleet <span>Command</span></h1>
+      </div>
+    </div>
+    <p class="ds-hero-sub">A unified visual language built for clarity, reliability, and precision. Every token, component, and pattern engineered for enterprise fleet operations.</p>
+    <div class="ds-hero-meta">
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Primary Font</span><span class="ds-hero-meta-value">Inter</span></div>
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Mono Font</span><span class="ds-hero-meta-value">JetBrains Mono</span></div>
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Grid</span><span class="ds-hero-meta-value">12-col / 24px</span></div>
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Base Unit</span><span class="ds-hero-meta-value">8pt</span></div>
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Dark Mode</span><span class="ds-hero-meta-value">First-class</span></div>
+      <div class="ds-hero-meta-item"><span class="ds-hero-meta-label">Sections</span><span class="ds-hero-meta-value">15</span></div>
+    </div>
+  </div>
+
+  <!-- ── 00 BRAND & LOGO ── -->
+  <section class="ds-section" id="brand">
+    <div class="ds-section-header">
+      <span class="ds-section-number">00</span>
+      <h2 class="ds-section-title">Brand & Logo</h2>
+    </div>
+    <p class="ds-section-desc">The Fleet Command OS logo is a four-petal pinwheel. The top-left petal uses Signal Green (#72E3AD) as the brand accent; the remaining three petals use Deep Navy (#0F182A) on light backgrounds, and shift to Steel Blue (#A3B8D0) on dark backgrounds. Always maintain clear space equal to the logo width around it.</p>
+
+    <div class="two-col mb-lg">
+      <!-- Light usage -->
+      <div class="card" style="text-align:center;padding:var(--2xl)">
+        <div class="card-label mb-md">Light Background</div>
+        <div style="display:inline-flex;align-items:center;justify-content:center;padding:var(--xl);background:#F4F4F5;border-radius:var(--r-card);border:1px dashed var(--border-color)">
+          <svg width="64" height="64" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+        </div>
+        <div style="margin-top:var(--md);display:flex;gap:var(--xl);justify-content:center">
+          <div style="text-align:center"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary)">Accent</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text);margin-top:2px">#72E3AD</div></div>
+          <div style="text-align:center"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary)">Primary</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text-primary);margin-top:2px">#0F182A</div></div>
+        </div>
+      </div>
+      <!-- Dark usage -->
+      <div class="card" style="text-align:center;padding:var(--2xl);background:#1A1A1A">
+        <div class="card-label mb-md" style="color:rgba(255,255,255,0.5)">Dark Background</div>
+        <div style="display:inline-flex;align-items:center;justify-content:center;padding:var(--xl);background:#121212;border-radius:var(--r-card);border:1px dashed rgba(255,255,255,0.12)">
+          <svg width="64" height="64" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#A3B8D0"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#A3B8D0"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#A3B8D0"/></svg>
+        </div>
+        <div style="margin-top:var(--md);display:flex;gap:var(--xl);justify-content:center">
+          <div style="text-align:center"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5)">Accent</div><div style="font-family:var(--font-mono);font-size:12px;color:#4ade80;margin-top:2px">#72E3AD</div></div>
+          <div style="text-align:center"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5)">Primary</div><div style="font-family:var(--font-mono);font-size:12px;color:#fff;margin-top:2px">#A3B8D0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sizing reference -->
+    <div class="card mb-lg">
+      <div class="card-label mb-md">Size Reference</div>
+      <div style="display:flex;align-items:end;gap:var(--2xl);padding:var(--lg) 0">
+        <div style="text-align:center">
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:var(--sm)">16px</div>
+          <div style="font-size:10px;color:var(--text-secondary)">Favicon</div>
+        </div>
+        <div style="text-align:center">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:var(--sm)">24px</div>
+          <div style="font-size:10px;color:var(--text-secondary)">Inline</div>
+        </div>
+        <div style="text-align:center">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:var(--sm)">32px</div>
+          <div style="font-size:10px;color:var(--text-secondary)">Sidebar</div>
+        </div>
+        <div style="text-align:center">
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:var(--sm)">48px</div>
+          <div style="font-size:10px;color:var(--text-secondary)">Card header</div>
+        </div>
+        <div style="text-align:center">
+          <svg width="64" height="64" viewBox="0 0 32 32" fill="none"><path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/><path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/><path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/><path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/></svg>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:var(--sm)">64px</div>
+          <div style="font-size:10px;color:var(--text-secondary)">Hero / splash</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage rules -->
+    <div class="card">
+      <div class="card-label mb-md">Logo Rules</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--md)">
+        <div style="padding:var(--md);border-radius:var(--r-btn);border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.04)">
+          <div style="font-size:12px;font-weight:700;color:var(--status-green);margin-bottom:var(--xs)">Do</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6">Use the SVG mark at approved sizes (16/24/32/48/64px). Maintain clear space. Flip dark petals to white on dark backgrounds. Pair with "Fleet Command" in Space Grotesk 700.</div>
+        </div>
+        <div style="padding:var(--md);border-radius:var(--r-btn);border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.04)">
+          <div style="font-size:12px;font-weight:700;color:var(--critical-red);margin-bottom:var(--xs)">Don't</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6">Don't rotate the logo. Don't recolor the green petal. Don't place on busy backgrounds without contrast overlay. Don't stretch or distort the aspect ratio.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 01 COLORS ── -->
+  <section class="ds-section" id="colors">
+    <div class="ds-section-header">
+      <span class="ds-section-number">01</span>
+      <h2 class="ds-section-title">Color Palette</h2>
+    </div>
+    <p class="ds-section-desc">Every color carries semantic weight. Never use status colors decoratively if it conflicts with their meaning. Green = active/pass, Amber = warning/pending, Red = critical/error, Cyan = interactive/selected.</p>
+
+    <div class="group-label mb-sm">Primary</div>
+    <div class="color-grid mb-lg">
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#1E3A5F"></div><div class="color-swatch-info"><div class="color-swatch-name">Fleet Blue</div><div class="color-swatch-hex">#1E3A5F · Nav, headers</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#72e3ad"></div><div class="color-swatch-info"><div class="color-swatch-name">Signal Green</div><div class="color-swatch-hex">#72e3ad fill · --signal-text: #0d7a4f (text, 4.9:1 AA)</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#0F1E33"></div><div class="color-swatch-info"><div class="color-swatch-name">Deep Navy</div><div class="color-swatch-hex">#0F1E33 · Dark overlays</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#1A1A1A"></div><div class="color-swatch-info"><div class="color-swatch-name">Sidebar Dark</div><div class="color-swatch-hex">#1A1A1A · Dark mode sidebar</div></div></div>
+    </div>
+
+    <div class="group-label mb-sm">Status / Semantic</div>
+    <div class="color-grid mb-lg">
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#22C55E"></div><div class="color-swatch-info"><div class="color-swatch-name">Status Green</div><div class="color-swatch-hex">#22C55E · Active / Pass</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#F59E0B"></div><div class="color-swatch-info"><div class="color-swatch-name">Alert Amber</div><div class="color-swatch-hex">#F59E0B · Warning / Idle</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#EF4444"></div><div class="color-swatch-info"><div class="color-swatch-name">Critical Red</div><div class="color-swatch-hex">#EF4444 · Error / OOS</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#64748B"></div><div class="color-swatch-info"><div class="color-swatch-name">Slate Gray</div><div class="color-swatch-hex">#64748B · Inactive / Secondary</div></div></div>
+    </div>
+
+    <div class="group-label mb-sm">Surfaces</div>
+    <div class="color-grid">
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#F4F4F5;border-bottom:1px solid #E0E0E0"></div><div class="color-swatch-info"><div class="color-swatch-name">Page Background</div><div class="color-swatch-hex">#F4F4F5 · Light canvas</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#FFFFFF;border-bottom:1px solid #E0E0E0"></div><div class="color-swatch-info"><div class="color-swatch-name">Card Surface</div><div class="color-swatch-hex">#FFFFFF · Widget bg</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#111827"></div><div class="color-swatch-info"><div class="color-swatch-name">Dark Canvas</div><div class="color-swatch-hex">#111827 · Dark page bg</div></div></div>
+      <div class="color-swatch"><div class="color-swatch-preview" style="background:#1F2937"></div><div class="color-swatch-info"><div class="color-swatch-name">Dark Card</div><div class="color-swatch-hex">#1F2937 · Dark widget</div></div></div>
+    </div>
+  </section>
+
+  <!-- ── 02 TYPOGRAPHY ── -->
+  <section class="ds-section" id="typography">
+    <div class="ds-section-header">
+      <span class="ds-section-number">02</span>
+      <h2 class="ds-section-title">Typography</h2>
+    </div>
+    <p class="ds-section-desc">Inter for all UI copy. JetBrains Mono for vehicle IDs, codes, and timestamps. Status labels use uppercase + letter-spacing 0.05em. Max 3 type sizes per widget. Min 4.5:1 contrast on colored backgrounds.</p>
+
+    <div class="card">
+      <div class="type-scale">
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">Display</div><div class="type-meta-spec">32px · 700 · lh 1.2<br>Space Grotesk (hero KPIs)</div></div>
+          <div class="type-specimen" style="font-size:32px;font-weight:700;line-height:1.2;font-family:var(--font-display)">Fleet Active: 142</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">H1</div><div class="type-meta-spec">24px · 700 · lh 1.3</div></div>
+          <div class="type-specimen" style="font-size:24px;font-weight:700;line-height:1.3">Vehicle Overview Dashboard</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">H2</div><div class="type-meta-spec">20px · 600 · lh 1.35</div></div>
+          <div class="type-specimen" style="font-size:20px;font-weight:600;line-height:1.35">Maintenance Due This Week</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">H3</div><div class="type-meta-spec">16px · 600 · lh 1.4</div></div>
+          <div class="type-specimen" style="font-size:16px;font-weight:600;line-height:1.4">Route Assignment — North Region</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">Body</div><div class="type-meta-spec">14px · 400 · lh 1.5</div></div>
+          <div class="type-specimen" style="font-size:14px;font-weight:400;line-height:1.5">Vehicle FLT-1042 has been idling at Depot B for 47 minutes. Driver James Morales last checked in at 14:23 PST.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">Small</div><div class="type-meta-spec">12px · 400 · lh 1.4</div></div>
+          <div class="type-specimen" style="font-size:12px;font-weight:400;color:var(--text-secondary)">Last synced 2 minutes ago · GPS accuracy ±15m · Odometer 84,210 mi</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">Micro / Badge</div><div class="type-meta-spec">11px · 500 · ls 0.05em<br>Always uppercase</div></div>
+          <div class="type-specimen" style="font-size:11px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase">ACTIVE &nbsp;·&nbsp; IN SHOP &nbsp;·&nbsp; EN ROUTE &nbsp;·&nbsp; OUT OF SERVICE</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta"><div class="type-meta-role">Mono</div><div class="type-meta-spec">JetBrains Mono<br>IDs · codes · timestamps</div></div>
+          <div class="type-specimen" style="font-family:var(--font-mono);font-size:13px;color:var(--signal-text)">FLT-1042 &nbsp; CA·7XK·9201 &nbsp; 2026-03-04T14:23:00Z</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 03 SPACING ── -->
+  <section class="ds-section" id="spacing">
+    <div class="ds-section-header">
+      <span class="ds-section-number">03</span>
+      <h2 class="ds-section-title">Spacing & Layout</h2>
+    </div>
+    <p class="ds-section-desc">8pt base system — every spacing value is a multiple of 4px. Use tokens, never arbitrary pixel values. Layout: 12-column grid, 24px gutters, 24px margins, 1440px max-width.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-label mb-md">Spacing Scale</div>
+        <div class="spacing-scale">
+          <div class="spacing-row"><span class="spacing-token">xs</span><div><div class="spacing-bar" style="width:4px"></div></div><span class="spacing-value">4px</span><span class="spacing-usage">Icon padding, tight gaps</span></div>
+          <div class="spacing-row"><span class="spacing-token">sm</span><div><div class="spacing-bar" style="width:8px"></div></div><span class="spacing-value">8px</span><span class="spacing-usage">Label–value gap, chip pad</span></div>
+          <div class="spacing-row"><span class="spacing-token">md</span><div><div class="spacing-bar" style="width:16px"></div></div><span class="spacing-value">16px</span><span class="spacing-usage">Card padding (default)</span></div>
+          <div class="spacing-row"><span class="spacing-token">lg</span><div><div class="spacing-bar" style="width:24px"></div></div><span class="spacing-value">24px</span><span class="spacing-usage">Widget rows, gutters</span></div>
+          <div class="spacing-row"><span class="spacing-token">xl</span><div><div class="spacing-bar" style="width:32px"></div></div><span class="spacing-value">32px</span><span class="spacing-usage">Section separation</span></div>
+          <div class="spacing-row"><span class="spacing-token">2xl</span><div><div class="spacing-bar" style="width:48px"></div></div><span class="spacing-value">48px</span><span class="spacing-usage">Major page breaks</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label mb-md">Border Radius</div>
+        <div style="display:flex;flex-direction:column;gap:var(--md)">
+          <div style="display:flex;align-items:center;gap:var(--md)">
+            <div style="width:40px;height:40px;background:var(--fleet-blue);border-radius:6px;flex-shrink:0"></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">6px — Chips / Badges</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:2px">--r-chip: 6px</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--md)">
+            <div style="width:40px;height:40px;background:var(--fleet-blue);border-radius:8px;flex-shrink:0"></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">8px — Buttons / Inputs</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:2px">--r-btn: 8px</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--md)">
+            <div style="width:40px;height:40px;background:var(--fleet-blue);border-radius:12px;flex-shrink:0"></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">12px — Cards / Widgets</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:2px">--r-card: 12px</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--md)">
+            <div style="width:64px;height:28px;background:var(--signal-cyan);border-radius:20px;flex-shrink:0"></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">20px — Pill / Status</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:2px">--r-badge: 20px</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 04 ICONS ── -->
+  <section class="ds-section" id="icons">
+    <div class="ds-section-header">
+      <span class="ds-section-number">04</span>
+      <h2 class="ds-section-title">Iconography</h2>
+    </div>
+    <p class="ds-section-desc">Lucide React or Phosphor Icons. Outlined style, 1.5px stroke. Sizes: 16px compact, 20px default, 24px large. Icons communicate function — never decoration.</p>
+
+    <div class="icon-grid">
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><div class="icon-item-name">LayoutDashboard<br>Dashboard</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17H3a2 2 0 01-2-2V9l3-5h14l3 5v6a2 2 0 01-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg><div class="icon-item-name">Car<br>Vehicles</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><div class="icon-item-name">Truck<br>Fleet</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><div class="icon-item-name">UserCircle<br>Drivers</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 000-7h-11a3.5 3.5 0 010-7H15"/><circle cx="18" cy="5" r="3"/></svg><div class="icon-item-name">Route<br>Trips</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg><div class="icon-item-name">Wrench<br>Maintenance</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 22V8l6-5 6 5v14M8 22v-7h4v7"/><path d="M17 8h2a2 2 0 012 2v6l-2 2v-8h-2V8z"/></svg><div class="icon-item-name">Fuel<br>Fuel</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg><div class="icon-item-name">Bell<br>Alerts</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><div class="icon-item-name">BarChart2<br>Reports</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><div class="icon-item-name">MapPin<br>GPS / Location</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><div class="icon-item-name">SlidersHorizontal<br>Settings</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><div class="icon-item-name">ShieldCheck<br>Compliance</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icon-item-name">DollarSign<br>Cost</div></div>
+      <div class="icon-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div class="icon-item-name">Clock<br>Time</div></div>
+    </div>
+  </section>
+
+  <!-- ── 05 BADGES ── -->
+  <section class="ds-section" id="badges">
+    <div class="ds-section-header">
+      <span class="ds-section-number">05</span>
+      <h2 class="ds-section-title">Status Badges</h2>
+    </div>
+    <p class="ds-section-desc">Status chips communicate vehicle or asset state at a glance. Always pair a colored dot with text. Critical states (Out of Service) use a CSS pulse ring. All badges: 20px radius · 2px 10px padding · 11px · 600 weight.</p>
+
+    <div class="card mb-md">
+      <div class="badge-row" style="margin-bottom:var(--lg)">
+        <span class="badge badge-active">Active</span>
+        <span class="badge badge-enroute">En Route</span>
+        <span class="badge badge-inshop">In Shop</span>
+        <span class="badge badge-oos">Out of Service</span>
+        <span class="badge badge-inactive">Inactive</span>
+      </div>
+      <div style="border-top:1px solid var(--border-color);padding-top:var(--md)">
+        <div class="card-label mb-sm">Color Spec</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sm)">
+          <div style="font-size:12px;color:var(--text-secondary)"><span style="color:#15803D;font-weight:600">Active</span> — bg #DCFCE7 · text #15803D</div>
+          <div style="font-size:12px;color:var(--text-secondary)"><span style="color:#1D4ED8;font-weight:600">En Route</span> — bg #EFF6FF · text #1D4ED8</div>
+          <div style="font-size:12px;color:var(--text-secondary)"><span style="color:#B45309;font-weight:600">In Shop</span> — bg #FEF3C7 · text #B45309</div>
+          <div style="font-size:12px;color:var(--text-secondary)"><span style="color:#B91C1C;font-weight:600">Out of Service</span> — bg #FEE2E2 · text #B91C1C + pulse</div>
+          <div style="font-size:12px;color:var(--text-secondary)"><span style="color:#64748B;font-weight:600">Inactive</span> — bg #F1F5F9 · text #64748B</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 06 KPI ── -->
+  <section class="ds-section" id="kpi">
+    <div class="ds-section-header">
+      <span class="ds-section-number">06</span>
+      <h2 class="ds-section-title">KPI Summary Cards</h2>
+    </div>
+    <p class="ds-section-desc">The metric value is the hero — 32px/700. Always include a trend indicator (arrow + %) and a breakdown row. Card: 12px radius, 20px padding, canonical shadow.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Vehicles</div>
+        <div class="kpi-value">187</div>
+        <div class="kpi-trend up"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>+5% since last week</div>
+        <div class="kpi-breakdown">
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--status-green)"></div>142 Active</div>
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--slate-gray)"></div>45 Inactive</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">On Route Now</div>
+        <div class="kpi-value" style="color:var(--signal-text)">94</div>
+        <div class="kpi-trend up"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>+12% vs yesterday</div>
+        <div class="kpi-breakdown">
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--signal-cyan)"></div>94 En Route</div>
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--alert-amber)"></div>18 Idle</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Maintenance Due</div>
+        <div class="kpi-value" style="color:var(--alert-amber)">23</div>
+        <div class="kpi-trend down"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>8 overdue · urgent</div>
+        <div class="kpi-breakdown">
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--alert-amber)"></div>15 Due Soon</div>
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--critical-red)"></div>8 Overdue</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg Fuel Efficiency</div>
+        <div class="kpi-value">28.4<span style="font-size:16px;font-weight:500;color:var(--text-secondary)"> mpg</span></div>
+        <div class="kpi-trend neutral">— No change this week</div>
+        <div class="kpi-breakdown">
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--status-green)"></div>Best 34.1</div>
+          <div class="kpi-breakdown-item"><div class="kpi-dot" style="background:var(--critical-red)"></div>Low 19.2</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 07 BUTTONS ── -->
+  <section class="ds-section" id="buttons">
+    <div class="ds-section-header">
+      <span class="ds-section-number">07</span>
+      <h2 class="ds-section-title">Buttons</h2>
+    </div>
+    <p class="ds-section-desc">Five variants. Primary (cyan) for main CTAs. Danger for destructive actions only. All: 36px height, 8px radius, 600 weight, 150ms hover transition.</p>
+
+    <div class="card">
+      <div class="btn-showcase mb-lg">
+        <button class="btn btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes</button>
+        <button class="btn btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancel</button>
+        <button class="btn btn-ghost">View Details</button>
+        <button class="btn btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Delete Vehicle</button>
+        <button class="btn btn-icon" title="Filter"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+        <button class="btn btn-icon" title="Export"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="btn btn-icon" title="More"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+      </div>
+      <div style="padding-top:var(--md);border-top:1px solid var(--border-color)">
+        <div class="card-label mb-sm">Pill Variant (border-radius: 20px)</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary" style="border-radius:20px;height:32px;font-size:13px">Assign Driver</button>
+          <button class="btn btn-secondary" style="border-radius:20px;height:32px;font-size:13px">Export CSV</button>
+          <button class="btn btn-ghost" style="border-radius:20px;height:32px;font-size:13px">View Route</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 08 TABLE ── -->
+  <section class="ds-section" id="table">
+    <div class="ds-section-header">
+      <span class="ds-section-number">08</span>
+      <h2 class="ds-section-title">Data Table</h2>
+    </div>
+    <p class="ds-section-desc">Vehicle IDs use JetBrains Mono in Signal Cyan. Header: 11px uppercase gray. Body rows: 48px min height, white bg. Hover: #F1F5F9. Sticky header always on scrollable tables.</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle ID</th>
+            <th>Status</th>
+            <th>Driver</th>
+            <th>Location</th>
+            <th>Last Update</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">FLT-1042</td>
+            <td><span class="badge badge-active">Active</span></td>
+            <td>James Morales</td>
+            <td class="dim">Depot B → Downtown Hub</td>
+            <td class="dim" style="font-family:var(--font-mono);font-size:12px">2 min ago</td>
+            <td><div style="display:flex;gap:4px"><button class="btn btn-ghost" style="height:28px;font-size:12px;padding:0 8px">View</button><button class="btn btn-icon" style="width:28px;height:28px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+          </tr>
+          <tr>
+            <td class="mono">FLT-0891</td>
+            <td><span class="badge badge-enroute">En Route</span></td>
+            <td>Sarah Chen</td>
+            <td class="dim">I-405 N · Mile 23</td>
+            <td class="dim" style="font-family:var(--font-mono);font-size:12px">Just now</td>
+            <td><div style="display:flex;gap:4px"><button class="btn btn-ghost" style="height:28px;font-size:12px;padding:0 8px">View</button><button class="btn btn-icon" style="width:28px;height:28px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+          </tr>
+          <tr>
+            <td class="mono">FLT-2204</td>
+            <td><span class="badge badge-inshop">In Shop</span></td>
+            <td>—</td>
+            <td class="dim">West Side Auto · Bay 3</td>
+            <td class="dim" style="font-family:var(--font-mono);font-size:12px">14:05 PST</td>
+            <td><div style="display:flex;gap:4px"><button class="btn btn-ghost" style="height:28px;font-size:12px;padding:0 8px">View</button><button class="btn btn-icon" style="width:28px;height:28px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+          </tr>
+          <tr>
+            <td class="mono">FLT-3317</td>
+            <td><span class="badge badge-oos">Out of Service</span></td>
+            <td>—</td>
+            <td class="dim">Depot A · Lot C</td>
+            <td class="dim" style="font-family:var(--font-mono);font-size:12px">Yesterday</td>
+            <td><div style="display:flex;gap:4px"><button class="btn btn-ghost" style="height:28px;font-size:12px;padding:0 8px">View</button><button class="btn btn-icon" style="width:28px;height:28px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+          </tr>
+          <tr>
+            <td class="mono">FLT-0558</td>
+            <td><span class="badge badge-inactive">Inactive</span></td>
+            <td>Kevin Park</td>
+            <td class="dim">Depot B · Charging</td>
+            <td class="dim" style="font-family:var(--font-mono);font-size:12px">11:30 PST</td>
+            <td><div style="display:flex;gap:4px"><button class="btn btn-ghost" style="height:28px;font-size:12px;padding:0 8px">View</button><button class="btn btn-icon" style="width:28px;height:28px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 09 NAVIGATION ── -->
+  <section class="ds-section" id="nav">
+    <div class="ds-section-header">
+      <span class="ds-section-number">09</span>
+      <h2 class="ds-section-title">Navigation Sidebar</h2>
+    </div>
+    <p class="ds-section-desc">Theme-aware sidebar: #F7F8FA on light mode with smooth box-shadow, Charcoal Grey (#1A1A1A) on dark mode. Active state: inverted signal-cyan pill fill (#72e3ad · dark: #4ade80) with #0F1E33 text — 10.1:1 AAA contrast. 44px item height. 240px width.</p>
+
+    <div class="two-col">
+      <div class="sidebar-demos">
+        <!-- Light variant -->
+        <div class="sidebar-demo light-variant">
+          <div class="sidebar-demo-logo">
+            <div class="sdl-mark"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/>
+          <path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#0F182A"/>
+          <path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#0F182A"/>
+          <path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#0F182A"/>
+        </svg></div>
+            <div><div class="sdl-name">Fleet Command</div><span class="sdl-sub">Operations OS</span></div>
+          </div>
+          <div style="padding:4px 0">
+            <div class="sidebar-demo-section">Main</div>
+            <div class="sidebar-demo-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17H3a2 2 0 01-2-2V9l3-5h14l3 5v6a2 2 0 01-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>Vehicles</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Tasks</div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-demo-section">Insights</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Analytics</div>
+          </div>
+        </div>
+        <!-- Dark variant -->
+        <div class="sidebar-demo dark-variant">
+          <div class="sidebar-demo-logo">
+            <div class="sdl-mark"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.97024 6.0624C6.28736 7.38 7.02729 9.16679 7.02729 11.0298C7.02729 12.8929 6.28736 14.6797 4.97024 15.9973L0 20.9619L4.97024 25.9321L14.9106 15.9973L4.97024 6.0624Z" fill="#72E3AD"/>
+          <path d="M22.0595 20.9731L27.0297 25.9377C25.7126 24.6201 24.9727 22.8333 24.9727 20.9703C24.9727 19.1072 25.7126 17.3204 27.0297 16.0029L32 11.0326L27.0297 6.0624L17.0949 16.0029L22.0595 20.9731Z" fill="#A3B8D0"/>
+          <path d="M6.06267 27.0297C7.38027 25.7126 9.16701 24.9726 11.0301 24.9726C12.8931 24.9726 14.6799 25.7126 15.9975 27.0297L20.9622 32L25.9324 27.0297L15.9975 17.0948L6.06267 27.0297Z" fill="#A3B8D0"/>
+          <path d="M25.938 4.97025C24.6203 6.28736 22.8335 7.02729 20.9705 7.02729C19.1074 7.02729 17.3207 6.28736 16.0031 4.97025L11.0329 0L6.06267 4.97025L16.0031 14.9107L25.938 4.97025Z" fill="#A3B8D0"/>
+        </svg></div>
+            <div><div class="sdl-name">Fleet Command</div><span class="sdl-sub">Operations OS</span></div>
+          </div>
+          <div style="padding:4px 0">
+            <div class="sidebar-demo-section">Main</div>
+            <div class="sidebar-demo-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17H3a2 2 0 01-2-2V9l3-5h14l3 5v6a2 2 0 01-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>Vehicles</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Tasks</div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-demo-section">Insights</div>
+            <div class="sidebar-demo-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Analytics</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label mb-md">Anatomy</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Light bg</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">#F7F8FA · box-shadow</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Dark bg</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">#1A1A1A · box-shadow</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Full width</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">240px</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Collapsed width</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">56px</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Nav item height</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">44px · font-weight 500</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Active bg · light</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">#72e3ad fill · text #0F1E33</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Active bg · dark</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">#4ade80 fill · text #0F1E33</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-secondary)">Active contrast</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">10.1:1 AAA ✓</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0"><span style="color:var(--text-secondary)">Icon size</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">15px outlined 1.5px stroke</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 10 CHARTS ── -->
+  <section class="ds-section" id="charts">
+    <div class="ds-section-header">
+      <span class="ds-section-number">10</span>
+      <h2 class="ds-section-title">Charts & Visualization</h2>
+    </div>
+    <p class="ds-section-desc">No chart borders — float on white card surface. Grid lines: #E2E8F0 at 50% opacity. Tooltip: white card, 8px radius, soft shadow. Animate 300ms ease-out on load. Max 3 chart types per dashboard view.</p>
+
+    <div class="two-col mb-md">
+      <div class="chart-preview">
+        <div class="chart-header"><span class="chart-title">Fleet Activity</span><span class="chart-meta">Last 12 days</span></div>
+        <div class="chart-bars">
+          <div class="chart-bar" style="height:45%;animation-delay:0ms"></div>
+          <div class="chart-bar" style="height:62%;animation-delay:40ms"></div>
+          <div class="chart-bar" style="height:38%;animation-delay:80ms"></div>
+          <div class="chart-bar" style="height:78%;animation-delay:120ms"></div>
+          <div class="chart-bar" style="height:55%;animation-delay:160ms"></div>
+          <div class="chart-bar" style="height:91%;animation-delay:200ms"></div>
+          <div class="chart-bar" style="height:72%;animation-delay:240ms"></div>
+          <div class="chart-bar" style="height:84%;animation-delay:280ms"></div>
+          <div class="chart-bar" style="height:67%;animation-delay:320ms"></div>
+          <div class="chart-bar" style="height:95%;animation-delay:360ms"></div>
+          <div class="chart-bar" style="height:79%;animation-delay:400ms"></div>
+          <div class="chart-bar" style="height:88%;animation-delay:440ms"></div>
+        </div>
+        <div style="display:flex;gap:var(--md);margin-top:var(--sm)">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:10px;height:10px;background:var(--signal-cyan);border-radius:50%"></div>Active Vehicles</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label mb-md">Chart Type Reference</div>
+        <div style="display:flex;flex-direction:column;gap:var(--sm)">
+          <div style="display:flex;gap:var(--sm);align-items:flex-start;padding:8px;background:var(--page-bg);border-radius:8px"><div style="width:3px;height:36px;background:var(--signal-cyan);border-radius:2px;flex-shrink:0;margin-top:2px"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Area Line</div><div style="font-size:12px;color:var(--text-secondary)">KPI over time, single metric</div></div></div>
+          <div style="display:flex;gap:var(--sm);align-items:flex-start;padding:8px;background:var(--page-bg);border-radius:8px"><div style="width:3px;height:36px;background:var(--status-green);border-radius:2px;flex-shrink:0;margin-top:2px"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Horizontal Bar</div><div style="font-size:12px;color:var(--text-secondary)">Comparison across categories</div></div></div>
+          <div style="display:flex;gap:var(--sm);align-items:flex-start;padding:8px;background:var(--page-bg);border-radius:8px"><div style="width:3px;height:36px;background:var(--fleet-blue);border-radius:2px;flex-shrink:0;margin-top:2px"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Donut Chart</div><div style="font-size:12px;color:var(--text-secondary)">Fleet composition, part-to-whole</div></div></div>
+          <div style="display:flex;gap:var(--sm);align-items:flex-start;padding:8px;background:var(--page-bg);border-radius:8px"><div style="width:3px;height:36px;background:var(--alert-amber);border-radius:2px;flex-shrink:0;margin-top:2px"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Stacked Bar</div><div style="font-size:12px;color:var(--text-secondary)">Alert counts by type</div></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Chart Legend Spec -->
+    <div class="card" style="margin-top:var(--lg)">
+      <div class="card-label mb-md">Chart Legend Specification</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:var(--md)">All chart legends across the platform must follow this canonical style. Use circles for dot indicators, consistent 12px font size, and 8px internal gap. Position ApexCharts legends at bottom-left.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--lg)">
+        <!-- Dot Legend Example -->
+        <div style="background:var(--page-bg);border-radius:var(--r-card);padding:var(--md)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:var(--sm)">Dot Legend</div>
+          <div style="display:flex;gap:var(--md);flex-wrap:wrap;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:10px;height:10px;border-radius:50%;background:var(--status-green);flex-shrink:0"></div> Healthy (42)</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:10px;height:10px;border-radius:50%;background:var(--alert-amber);flex-shrink:0"></div> Warning (12)</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:10px;height:10px;border-radius:50%;background:var(--critical-red);flex-shrink:0"></div> Critical (6)</div>
+          </div>
+        </div>
+        <!-- Dash Legend Example -->
+        <div style="background:var(--page-bg);border-radius:var(--r-card);padding:var(--md)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:var(--sm)">Dash Legend (Budget Lines)</div>
+          <div style="display:flex;gap:var(--md);flex-wrap:wrap;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:10px;height:10px;border-radius:50%;background:var(--fleet-blue);flex-shrink:0"></div> Actual Spend</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)"><div style="width:16px;height:0;border-top:2px dashed var(--critical-red);flex-shrink:0"></div> Budget Target</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:var(--md);display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sm)">
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Dot Shape</span><br>Circle (border-radius: 50%)</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Dot Size</span><br>10 &times; 10px</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Font Size</span><br>12px (hi-fi) / 10px (wireframes)</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Internal Gap</span><br>8px (between dot and label)</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Item Gap</span><br>var(--md) / 16px between items</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">ApexCharts</span><br>position: bottom, align: left, markers: circle 5px</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 11 LIVE MAP ── -->
+  <section class="ds-section" id="map">
+    <div class="ds-section-header">
+      <span class="ds-section-number">11</span>
+      <h2 class="ds-section-title">Live Map Layer</h2>
+    </div>
+    <p class="ds-section-desc">Vehicle markers use semantic status colors: green (active/moving), amber (idle), red (alert/stopped), gray (offline). Routes: 3px solid cyan for active, gray for historical. CartoDB Light base map for clean integration with the design system.</p>
+
+    <div class="map-stats">
+      <div class="map-stat">
+        <div class="map-stat-label">Active</div>
+        <div class="map-stat-value" style="color:var(--status-green)">94</div>
+        <div class="map-stat-sub">En Route · Moving</div>
+      </div>
+      <div class="map-stat">
+        <div class="map-stat-label">Idle</div>
+        <div class="map-stat-value" style="color:var(--alert-amber)">18</div>
+        <div class="map-stat-sub">Parked · Waiting</div>
+      </div>
+      <div class="map-stat">
+        <div class="map-stat-label">Alert</div>
+        <div class="map-stat-value" style="color:var(--critical-red)">5</div>
+        <div class="map-stat-sub">Out of Service</div>
+      </div>
+      <div class="map-stat">
+        <div class="map-stat-label">Offline</div>
+        <div class="map-stat-value" style="color:var(--slate-gray)">12</div>
+        <div class="map-stat-sub">No GPS signal</div>
+      </div>
+    </div>
+
+    <div class="map-wrapper">
+      <div id="fleet-map"></div>
+      <div class="map-controls">
+        <button class="map-ctrl-btn" data-zoom="+" title="Zoom in">+</button>
+        <button class="map-ctrl-btn" data-zoom="-" title="Zoom out">−</button>
+      </div>
+      <div class="map-legend">
+        <div class="map-legend-title">Vehicle Status</div>
+        <div class="map-legend-item"><span class="map-legend-dot" style="background:#22C55E"></span>Active / En Route</div>
+        <div class="map-legend-item"><span class="map-legend-dot" style="background:#F59E0B"></span>Idle / Pending</div>
+        <div class="map-legend-item"><span class="map-legend-dot" style="background:#EF4444"></span>Out of Service</div>
+        <div class="map-legend-item"><span class="map-legend-dot" style="background:#9CA3AF"></span>Offline</div>
+        <div class="map-legend-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border-color)">
+          <span style="width:20px;height:3px;background:#72e3ad;border-radius:2px;flex-shrink:0"></span>Active Route
+        </div>
+        <div class="map-legend-item">
+          <span style="width:20px;height:3px;background:#9CA3AF;border-radius:2px;flex-shrink:0;opacity:0.5"></span>Historical
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--md)">
+      <div class="card-label mb-md">Map Layer Specifications</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sm)">
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Base Map (Light)</span><br>CartoDB Positron / Mapbox light-v11</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Base Map (Dark)</span><br>CartoDB Dark Matter / Mapbox dark-v11</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Route Lines</span><br>3px solid · Cyan active · Gray historical</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Geofence Zones</span><br>10% opacity fill · 2px dashed border</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Cluster Icons</span><br>Circle with count for dense groupings</div>
+        <div style="font-size:12px;color:var(--text-secondary)"><span style="font-weight:600;color:var(--text-primary)">Marker Size</span><br>12px dot · 20px with border on hover</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 12 MOTION ── -->
+  <section class="ds-section" id="motion">
+    <div class="ds-section-header">
+      <span class="ds-section-number">12</span>
+      <h2 class="ds-section-title">Motion & Loading</h2>
+    </div>
+    <p class="ds-section-desc">Purposeful animation only. Skeleton loaders — never blank space during data fetch. Critical badge pulse. Reserve motion for key interactions.</p>
+
+    <div class="three-col mb-lg">
+      <div class="card" style="text-align:center">
+        <div class="card-label mb-sm">Hover Transition</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:var(--md)">150ms ease · bg + border-color</p>
+        <button class="btn btn-primary" style="transition:all 150ms ease">Hover me →</button>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-label mb-sm">Critical Pulse</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:var(--md)">CSS ring · OOS badges only</p>
+        <span class="badge badge-oos" style="display:inline-flex">Out of Service</span>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-label mb-sm">Page Transition</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:var(--md)">Fade-in 200ms · stagger 60ms</p>
+        <button class="btn btn-secondary" style="font-size:12px;height:30px" onclick="this.textContent='✓ Fired!'">Simulate</button>
+      </div>
+    </div>
+
+    <div class="group-label mb-sm">Skeleton Loaders</div>
+    <div class="three-col">
+      <div class="skeleton-card">
+        <div class="skeleton skel-line" style="width:55%"></div>
+        <div class="skeleton skel-title"></div>
+        <div class="skeleton skel-line" style="width:40%"></div>
+        <div style="margin-top:var(--sm);display:flex;gap:6px"><div class="skeleton skel-badge"></div><div class="skeleton skel-badge" style="width:60px"></div></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton skel-line" style="width:45%"></div>
+        <div class="skeleton skel-title" style="width:50%"></div>
+        <div class="skeleton skel-line" style="width:35%"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton skel-line" style="width:65%"></div>
+        <div class="skeleton skel-title" style="width:55%"></div>
+        <div class="skeleton skel-line" style="width:45%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 13 DARK MODE ── -->
+  <section class="ds-section" id="darkmode">
+    <div class="ds-section-header">
+      <span class="ds-section-number">13</span>
+      <h2 class="ds-section-title">Dark Mode</h2>
+    </div>
+    <p class="ds-section-desc">Dark mode is a first-class experience — not an afterthought. All components must support it. Status colors (green, amber, red, cyan) remain unchanged across modes. Toggle the switch in the top bar to preview.</p>
+
+    <div class="card">
+      <div class="card-label mb-md">Token Mapping</div>
+      <table class="dm-table">
+        <thead><tr><th>Token</th><th>Light Mode</th><th>Dark Mode</th></tr></thead>
+        <tbody>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--page-bg</td><td><span style="font-family:var(--font-mono);font-size:12px">#F4F4F5</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#121212</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--card-surface</td><td><span style="font-family:var(--font-mono);font-size:12px">#FFFFFF</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#171717</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--border-color</td><td><span style="font-family:var(--font-mono);font-size:12px">#E0E0E0</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#292929</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--text-primary</td><td><span style="font-family:var(--font-mono);font-size:12px">#111111</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#F0F0F0</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--text-secondary</td><td><span style="font-family:var(--font-mono);font-size:12px">#6B7280</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#9A9A9A</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--signal-cyan</td><td><span style="font-family:var(--font-mono);font-size:12px">#72e3ad</span></td><td><span style="font-family:var(--font-mono);font-size:12px">#4ade80</span></td></tr>
+          <tr><td style="font-family:var(--font-mono);font-size:12px;color:var(--signal-text)">--sidebar-bg</td><td><span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">#FFFFFF light</span></td><td><span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">#1A1A1A dark</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 14 RULES ── -->
+  <section class="ds-section" id="rules">
+    <div class="ds-section-header">
+      <span class="ds-section-number">14</span>
+      <h2 class="ds-section-title">Do's &amp; Don'ts</h2>
+    </div>
+    <p class="ds-section-desc">Hard rules that protect the integrity of the visual language. Consistency across all product surfaces is non-negotiable.</p>
+
+    <div class="dos-donts">
+      <div class="dos-card">
+        <div class="dos-title">✓ Do</div>
+        <ul class="rule-list">
+          <li>Use color purposefully — every status color has clear semantic meaning</li>
+          <li>Keep KPI numbers large and prominent — they are the hero of every card</li>
+          <li>Show trends alongside every metric (up/down arrow + % change)</li>
+          <li>Use real functional icons for navigation, not decorative illustrations</li>
+          <li>Keep sidebar collapsed by default on narrow/tablet screens</li>
+          <li>Use skeleton loaders while data fetches — never show blank space</li>
+        </ul>
+      </div>
+      <div class="donts-card">
+        <div class="donts-title">✕ Don't</div>
+        <ul class="rule-list">
+          <li>Don't use more than 3 chart types on a single dashboard view</li>
+          <li>Don't use red for anything other than critical/danger states</li>
+          <li>Don't place text directly over map layers without a backdrop card</li>
+          <li>Don't animate every element — reserve motion for key interactions only</li>
+          <li>Don't use more than 2 font weights on a single widget</li>
+          <li>Don't use decorative gradients on data — backgrounds only</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 15 FORM CONTROLS ── -->
+  <section class="ds-section" id="forms">
+    <div class="ds-section-header">
+      <span class="ds-section-number">15</span>
+      <h2 class="ds-section-title">Form Controls &amp; Dropdowns</h2>
+    </div>
+    <p class="ds-section-desc">Custom-designed form controls that maintain the Fleet Command visual language. Dropdowns animate open, highlight selections with signal-cyan, support search filtering, and show secondary metadata inline. Never use browser-native <code style="font-family:var(--font-mono);font-size:12px;background:var(--page-bg);padding:1px 5px;border-radius:4px;">&lt;select&gt;</code> in product surfaces.</p>
+
+    <!-- Row 1: Text inputs -->
+    <div class="group-label mb-sm">Text Input — States</div>
+    <div class="card mb-lg">
+      <div class="three-col">
+        <div class="fc-field">
+          <label class="fc-label">Default</label>
+          <input type="text" class="fc-input" placeholder="e.g. Oil change — VH-0019">
+          <span class="fc-input-hint">Enter a descriptive task name</span>
+        </div>
+        <div class="fc-field">
+          <label class="fc-label">Focused</label>
+          <input type="text" class="fc-input" value="Brake inspection VH-0034" style="border-color:var(--signal-cyan);box-shadow:0 0 0 3px rgba(114,227,173,0.18);">
+          <span class="fc-input-hint">3px signal-cyan ring on focus</span>
+        </div>
+        <div class="fc-field">
+          <label class="fc-label">Error</label>
+          <input type="text" class="fc-input" placeholder="Required" style="border-color:var(--critical-red);box-shadow:0 0 0 3px rgba(239,68,68,0.10);">
+          <span class="fc-input-error">Task title is required</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Vehicle picker (static open state) + searchable dropdown side by side -->
+    <div class="two-col mb-lg">
+
+      <!-- Vehicle picker — static open state -->
+      <div>
+        <div class="group-label mb-sm">Vehicle Select — Open State</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Vehicle</label>
+            <div style="position:relative;">
+              <div class="fc-select-trigger open" style="font-family:var(--font-mono);font-size:13px;color:var(--signal-text);">
+                VH-0001
+                <svg class="fc-select-arrow" style="transform:translateY(-50%) rotate(180deg);" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="position:relative;top:4px;animation:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item selected">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0001</span>
+                    <svg class="fc-dropdown-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0008</span></div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0019</span></div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0034</span></div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0041</span></div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0052</span></div>
+                  <div class="fc-dropdown-item"><span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0057</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Searchable vehicle picker — interactive -->
+      <div>
+        <div class="group-label mb-sm">Searchable Vehicle Picker — Interactive</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Vehicle</label>
+            <div class="fc-select" id="vehicle-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('vehicle-select')">
+                <span style="font-family:var(--font-mono);font-size:13px;color:var(--signal-text);">VH-0001</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-search">
+                  <input type="text" placeholder="Search vehicles…" id="vehicle-search" oninput="filterVehicles(this.value)">
+                </div>
+                <div class="fc-dropdown-list" id="vehicle-list">
+                  <div class="fc-dropdown-item selected" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0001</span>
+                    <span class="fc-dropdown-item-sub">Active · J. Rivera</span>
+                    <svg class="fc-dropdown-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0008</span>
+                    <span class="fc-dropdown-item-sub">Active · T. Nguyen</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0019</span>
+                    <span class="fc-dropdown-item-sub">Idle · —</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0034</span>
+                    <span class="fc-dropdown-item-sub">In Shop · —</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0041</span>
+                    <span class="fc-dropdown-item-sub">Active · K. Park</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0052</span>
+                    <span class="fc-dropdown-item-sub">Active · P. Sharma</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectVehicle(this,'vehicle-select')">
+                    <span class="fc-dropdown-item-label" style="font-family:var(--font-mono);font-size:13px;">VH-0057</span>
+                    <span class="fc-dropdown-item-sub">Offline · —</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Priority + Assignee interactive dropdowns -->
+    <div class="two-col mb-lg">
+      <!-- Priority dropdown -->
+      <div>
+        <div class="group-label mb-sm">Priority Select — Interactive</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Priority</label>
+            <div class="fc-select" id="priority-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('priority-select')">
+                <div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;"></div>
+                <span>Medium</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#22C55E','Low')">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Low</span>
+                  </div>
+                  <div class="fc-dropdown-item selected" onclick="selectPriority(this,'#F59E0B','Medium')">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Medium</span>
+                    <svg class="fc-dropdown-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#EF4444','High')">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">High</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#DC2626','Critical')">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;animation:pulse-ring 2s infinite;"></div>
+                    <span class="fc-dropdown-item-label">Critical</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assignee picker -->
+      <div>
+        <div class="group-label mb-sm">Assignee Picker — Interactive</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Assignee</label>
+            <div class="fc-select" id="assignee-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('assignee-select')">
+                <div class="fc-avatar" style="background:var(--fleet-blue);">JR</div>
+                <span>J. Rivera</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item selected" onclick="selectAssignee(this,'JR','J. Rivera','var(--fleet-blue)')">
+                    <div class="fc-avatar" style="background:var(--fleet-blue);">JR</div>
+                    <span class="fc-dropdown-item-label">J. Rivera</span>
+                    <svg class="fc-dropdown-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectAssignee(this,'TN','T. Nguyen','#0F1E33')">
+                    <div class="fc-avatar" style="background:#0F1E33;">TN</div>
+                    <span class="fc-dropdown-item-label">T. Nguyen</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectAssignee(this,'KP','K. Park','#7C3AED')">
+                    <div class="fc-avatar" style="background:#7C3AED;">KP</div>
+                    <span class="fc-dropdown-item-label">K. Park</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="selectAssignee(this,'MT','M. Torres','#0369A1')">
+                    <div class="fc-avatar" style="background:#0369A1;">MT</div>
+                    <span class="fc-dropdown-item-label">M. Torres</span>
+                  </div>
+                  <div class="fc-dropdown-divider"></div>
+                  <div class="fc-dropdown-item" onclick="selectAssignee(this,'—','Unassigned','#9CA3AF')">
+                    <div class="fc-avatar" style="background:#9CA3AF;">—</div>
+                    <span class="fc-dropdown-item-label" style="color:var(--text-secondary);">Unassigned</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Multi-select filter + Date range picker -->
+    <div class="group-label mb-sm">Advanced Filter Patterns</div>
+    <div class="two-col mb-lg">
+
+      <!-- Status multi-select -->
+      <div>
+        <div class="group-label mb-sm">Status Filter — Multi-Select</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Filter by Status</label>
+            <div class="fc-select" id="status-multi-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('status-multi-select')">
+                <span id="status-multi-label" style="flex:1">All Statuses</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item" onclick="toggleMultiSelect(this,'status-multi-select')">
+                    <div class="fc-multi-check"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--status-green);flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Active</span>
+                    <span class="fc-dropdown-item-sub">42</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="toggleMultiSelect(this,'status-multi-select')">
+                    <div class="fc-multi-check"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--alert-amber);flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Idle</span>
+                    <span class="fc-dropdown-item-sub">11</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="toggleMultiSelect(this,'status-multi-select')">
+                    <div class="fc-multi-check"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--fleet-blue);flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">In Shop</span>
+                    <span class="fc-dropdown-item-sub">6</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="toggleMultiSelect(this,'status-multi-select')">
+                    <div class="fc-multi-check"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--critical-red);flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Out of Service</span>
+                    <span class="fc-dropdown-item-sub">3</span>
+                  </div>
+                  <div class="fc-dropdown-item" onclick="toggleMultiSelect(this,'status-multi-select')">
+                    <div class="fc-multi-check"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--text-secondary);flex-shrink:0;"></div>
+                    <span class="fc-dropdown-item-label">Offline</span>
+                    <span class="fc-dropdown-item-sub">2</span>
+                  </div>
+                </div>
+                <div class="fc-dropdown-footer">
+                  <span class="fc-dropdown-footer-count" id="status-multi-count">0 selected</span>
+                  <button class="fc-btn-clear" onclick="clearMultiSelect('status-multi-select');event.stopPropagation()">Clear</button>
+                  <button class="fc-btn-apply" onclick="applyMultiSelect('status-multi-select');event.stopPropagation()">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date range picker -->
+      <div>
+        <div class="group-label mb-sm">Date Range — Quick Pick</div>
+        <div class="card">
+          <div class="fc-field">
+            <label class="fc-label">Date Range</label>
+            <div class="fc-select" id="date-range-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('date-range-select')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-secondary);"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Last 30 days</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-date-item fc-dropdown-item" onclick="selectDateRange(this,'Today')">
+                    <span class="fc-dropdown-item-label">Today</span>
+                    <span class="fc-dropdown-item-sub">Mar 5</span>
+                  </div>
+                  <div class="fc-date-item fc-dropdown-item" onclick="selectDateRange(this,'Yesterday')">
+                    <span class="fc-dropdown-item-label">Yesterday</span>
+                    <span class="fc-dropdown-item-sub">Mar 4</span>
+                  </div>
+                  <div class="fc-date-item fc-dropdown-item" onclick="selectDateRange(this,'Last 7 days')">
+                    <span class="fc-dropdown-item-label">Last 7 days</span>
+                    <span class="fc-dropdown-item-sub">Feb 27 – Mar 5</span>
+                  </div>
+                  <div class="fc-date-item fc-dropdown-item selected" onclick="selectDateRange(this,'Last 30 days')">
+                    <span class="fc-dropdown-item-label">Last 30 days</span>
+                    <span class="fc-dropdown-item-sub">Feb 4 – Mar 5</span>
+                    <svg class="fc-dropdown-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="fc-date-item fc-dropdown-item" onclick="selectDateRange(this,'Last 90 days')">
+                    <span class="fc-dropdown-item-label">Last 90 days</span>
+                    <span class="fc-dropdown-item-sub">Dec 5 – Mar 5</span>
+                  </div>
+                  <div class="fc-date-item fc-dropdown-item" onclick="selectDateRange(this,'This year')">
+                    <span class="fc-dropdown-item-label">This year</span>
+                    <span class="fc-dropdown-item-sub">Jan 1 – Mar 5</span>
+                  </div>
+                  <div class="fc-dropdown-divider"></div>
+                  <div class="fc-dropdown-group">Custom Range</div>
+                  <div style="padding:6px 12px 4px;display:flex;gap:6px;align-items:center;">
+                    <input type="date" class="fc-input" id="date-range-start" style="flex:1;font-size:12px;height:30px;" value="2026-02-04">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-secondary);"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    <input type="date" class="fc-input" id="date-range-end" style="flex:1;font-size:12px;height:30px;" value="2026-03-05">
+                  </div>
+                  <div class="fc-dropdown-footer">
+                    <span class="fc-dropdown-footer-count"></span>
+                    <button class="fc-btn-apply" onclick="applyCustomDate('date-range-select');event.stopPropagation()">Apply Range</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full "New Task" form demo -->
+    <div class="group-label mb-sm">Combined Pattern — New Task Form</div>
+    <div class="card">
+      <div style="max-width:420px;">
+        <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:var(--lg);">New Task</div>
+
+        <div class="fc-field mb-md">
+          <label class="fc-label">Task Title</label>
+          <input type="text" class="fc-input" placeholder="e.g. Oil change — VH-0019">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--md);margin-bottom:var(--md);">
+          <!-- Vehicle -->
+          <div class="fc-field">
+            <label class="fc-label">Vehicle</label>
+            <div class="fc-select" id="form-vehicle-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('form-vehicle-select')">
+                <span style="font-family:var(--font-mono);font-size:13px;color:var(--signal-text);flex:1">VH-0001</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item selected" onclick="selectSimple(this,'form-vehicle-select',this.querySelector('span').textContent,'var(--signal-text)','var(--font-mono)','13px')"><span style="font-family:var(--font-mono);font-size:13px;flex:1">VH-0001</span><svg class="fc-dropdown-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+                  <div class="fc-dropdown-item" onclick="selectSimple(this,'form-vehicle-select',this.querySelector('span').textContent,'var(--signal-text)','var(--font-mono)','13px')"><span style="font-family:var(--font-mono);font-size:13px;flex:1">VH-0008</span></div>
+                  <div class="fc-dropdown-item" onclick="selectSimple(this,'form-vehicle-select',this.querySelector('span').textContent,'var(--signal-text)','var(--font-mono)','13px')"><span style="font-family:var(--font-mono);font-size:13px;flex:1">VH-0019</span></div>
+                  <div class="fc-dropdown-item" onclick="selectSimple(this,'form-vehicle-select',this.querySelector('span').textContent,'var(--signal-text)','var(--font-mono)','13px')"><span style="font-family:var(--font-mono);font-size:13px;flex:1">VH-0034</span></div>
+                  <div class="fc-dropdown-item" onclick="selectSimple(this,'form-vehicle-select',this.querySelector('span').textContent,'var(--signal-text)','var(--font-mono)','13px')"><span style="font-family:var(--font-mono);font-size:13px;flex:1">VH-0041</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Priority -->
+          <div class="fc-field">
+            <label class="fc-label">Priority</label>
+            <div class="fc-select" id="form-priority-select">
+              <div class="fc-select-trigger" onclick="toggleDropdown('form-priority-select')">
+                <div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;"></div>
+                <span>Medium</span>
+                <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="fc-dropdown-panel" style="display:none;">
+                <div class="fc-dropdown-list">
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#22C55E','Low')"><div style="width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0;"></div><span class="fc-dropdown-item-label">Low</span></div>
+                  <div class="fc-dropdown-item selected" onclick="selectPriority(this,'#F59E0B','Medium')"><div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;"></div><span class="fc-dropdown-item-label">Medium</span><svg class="fc-dropdown-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#EF4444','High')"><div style="width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0;"></div><span class="fc-dropdown-item-label">High</span></div>
+                  <div class="fc-dropdown-item" onclick="selectPriority(this,'#DC2626','Critical')"><div style="width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;"></div><span class="fc-dropdown-item-label">Critical</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assignee -->
+        <div class="fc-field mb-md">
+          <label class="fc-label">Assignee</label>
+          <div class="fc-select" id="form-assignee-select">
+            <div class="fc-select-trigger" onclick="toggleDropdown('form-assignee-select')">
+              <div class="fc-avatar" style="background:var(--fleet-blue);">JR</div>
+              <span>J. Rivera</span>
+              <svg class="fc-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="fc-dropdown-panel" style="display:none;">
+              <div class="fc-dropdown-list">
+                <div class="fc-dropdown-item selected" onclick="selectAssignee(this,'JR','J. Rivera','var(--fleet-blue)')"><div class="fc-avatar" style="background:var(--fleet-blue);">JR</div><span class="fc-dropdown-item-label">J. Rivera</span><svg class="fc-dropdown-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <div class="fc-dropdown-item" onclick="selectAssignee(this,'TN','T. Nguyen','#0F1E33')"><div class="fc-avatar" style="background:#0F1E33;">TN</div><span class="fc-dropdown-item-label">T. Nguyen</span></div>
+                <div class="fc-dropdown-item" onclick="selectAssignee(this,'KP','K. Park','#7C3AED')"><div class="fc-avatar" style="background:#7C3AED;">KP</div><span class="fc-dropdown-item-label">K. Park</span></div>
+                <div class="fc-dropdown-item" onclick="selectAssignee(this,'MT','M. Torres','#0369A1')"><div class="fc-avatar" style="background:#0369A1;">MT</div><span class="fc-dropdown-item-label">M. Torres</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Due Date -->
+        <div class="fc-field mb-lg">
+          <label class="fc-label">Due Date</label>
+          <input type="date" class="fc-input" value="2026-03-10">
+        </div>
+
+        <div style="display:flex;gap:var(--sm);justify-content:flex-end;">
+          <button class="btn btn-secondary">Cancel</button>
+          <button class="btn btn-primary">Create Task</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div style="padding:var(--2xl) 0 var(--xl);border-top:1px solid var(--border-color);margin-top:var(--2xl);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--md)">
+    <div>
+      <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-primary)">Fleet Command Design System</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">v1.3 · March 2026 · Auto Fleet Management Platform</div>
+    </div>
+    <div style="display:flex;gap:var(--sm);flex-wrap:wrap">
+      <span class="ds-version-badge">Inter · JetBrains Mono</span>
+      <span class="ds-version-badge">v1.2</span>
+      <span class="ds-version-badge">15 Sections</span>
+      <span class="ds-version-badge">8pt Grid</span>
+      <span class="ds-version-badge">Dark Mode ✓</span>
+      <span class="ds-version-badge">Live Map ✓</span>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-label').textContent = isDark ? 'Light' : 'Dark';
+}
+
+// Scroll-aware active nav
+const sections = document.querySelectorAll('.ds-section[id]');
+const navLinks  = document.querySelectorAll('.ds-nav-item[href]');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(n => n.classList.remove('active'));
+      const a = document.querySelector(`.ds-nav-item[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { threshold: 0.3, rootMargin: '-60px 0px -40% 0px' });
+sections.forEach(s => obs.observe(s));
+
+// ── LEAFLET MAP ──
+(function initMap() {
+  if (typeof L === 'undefined') return;
+
+  const map = L.map('fleet-map', { zoomControl: false, attributionControl: true })
+    .setView([34.0522, -118.2437], 13);
+
+  const lightTiles = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  L.tileLayer(lightTiles, { attribution, subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+
+  // Vehicle data
+  const vehicles = [
+    { id:'FLT-1042', lat:34.058, lng:-118.246, status:'active',  driver:'James Morales',  loc:'Downtown → Depot B' },
+    { id:'FLT-0891', lat:34.063, lng:-118.257, status:'active',  driver:'Sarah Chen',     loc:'I-405 N · Mile 23' },
+    { id:'FLT-2204', lat:34.044, lng:-118.238, status:'idle',    driver:'—',              loc:'West Side Auto · Bay 3' },
+    { id:'FLT-3317', lat:34.039, lng:-118.265, status:'oos',     driver:'—',              loc:'Depot A · Lot C' },
+    { id:'FLT-0558', lat:34.071, lng:-118.230, status:'active',  driver:'Kevin Park',     loc:'Route 7 · Outbound' },
+    { id:'FLT-1198', lat:34.049, lng:-118.270, status:'idle',    driver:'Maria Torres',   loc:'Parking Lot · E' },
+    { id:'FLT-2891', lat:34.060, lng:-118.242, status:'active',  driver:'David Liu',      loc:'Hollywood Blvd' },
+    { id:'FLT-4102', lat:34.033, lng:-118.252, status:'offline', driver:'—',              loc:'Unknown · Last seen 6h ago' },
+    { id:'FLT-0774', lat:34.055, lng:-118.222, status:'active',  driver:'Priya Sharma',   loc:'Vermont Ave N' },
+    { id:'FLT-3050', lat:34.068, lng:-118.253, status:'idle',    driver:'Tom Nguyen',     loc:'Sunset & Vine' },
+  ];
+
+  const colors = { active:'#22C55E', idle:'#F59E0B', oos:'#EF4444', offline:'#9CA3AF' };
+  const labels = { active:'Active', idle:'Idle', oos:'Out of Service', offline:'Offline' };
+
+  function makeIcon(status) {
+    const color = colors[status] || '#9CA3AF';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.95"/>
+      ${status === 'active' ? `<circle cx="12" cy="12" r="12" fill="${color}" opacity="0.18"/>` : ''}
+    </svg>`;
+    return L.divIcon({
+      html: svg, className: '', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -14]
+    });
+  }
+
+  vehicles.forEach(v => {
+    const marker = L.marker([v.lat, v.lng], { icon: makeIcon(v.status) });
+    marker.bindPopup(`
+      <div class="fleet-popup">
+        <div class="fleet-popup-id">${v.id}</div>
+        <div class="fleet-popup-driver">${v.driver !== '—' ? v.driver : 'No driver assigned'}</div>
+        <div class="fleet-popup-loc">${v.loc}</div>
+        <div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;padding:2px 7px;border-radius:20px;background:${status_bg(v.status)};color:${status_text(v.status)}">${labels[v.status]}</div>
+      </div>
+    `, { closeButton: false, minWidth: 160 });
+    marker.addTo(map);
+  });
+
+  function status_bg(s) { return {active:'#DCFCE7',idle:'#FEF3C7',oos:'#FEE2E2',offline:'#F1F5F9'}[s]||'#F1F5F9'; }
+  function status_text(s){ return {active:'#15803D',idle:'#B45309',oos:'#B91C1C',offline:'#64748B'}[s]||'#64748B'; }
+
+  // Route polylines
+  const route1 = [[34.058, -118.246],[34.062, -118.250],[34.066, -118.254],[34.063, -118.257]];
+  const route2 = [[34.055, -118.222],[34.057, -118.228],[34.058, -118.236],[34.058, -118.246]];
+  const histRoute = [[34.044, -118.238],[34.047, -118.244],[34.049, -118.250],[34.049, -118.270]];
+
+  L.polyline(route1, { color:'#72e3ad', weight:3, opacity:0.9 }).addTo(map);
+  L.polyline(route2, { color:'#72e3ad', weight:3, opacity:0.9 }).addTo(map);
+  L.polyline(histRoute, { color:'#9CA3AF', weight:2, opacity:0.5, dashArray:'6,4' }).addTo(map);
+
+  // Geofence zone
+  L.circle([34.055, -118.246], { radius: 600, color:'#72e3ad', fillColor:'#72e3ad', fillOpacity:0.06, weight:1.5, dashArray:'6,4' }).addTo(map);
+
+  // Custom zoom controls
+  document.querySelector('.map-ctrl-btn[data-zoom="+"]')?.addEventListener('click', () => map.zoomIn());
+  document.querySelector('.map-ctrl-btn[data-zoom="-"]')?.addEventListener('click', () => map.zoomOut());
+
+  // Re-render on dark mode toggle
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) themeBtn.addEventListener('click', () => setTimeout(() => map.invalidateSize(), 100));
+})();
+
+// ── FORM CONTROLS & DROPDOWN LOGIC ──────────────────────────────────────────
+function toggleDropdown(id) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const trigger = select.querySelector('.fc-select-trigger');
+  const panel   = select.querySelector('.fc-dropdown-panel');
+  const isOpen  = panel.style.display !== 'none';
+
+  // Close all open dropdowns first
+  document.querySelectorAll('.fc-dropdown-panel').forEach(p => { p.style.display = 'none'; });
+  document.querySelectorAll('.fc-select-trigger').forEach(t => t.classList.remove('open'));
+
+  if (!isOpen) {
+    panel.style.display = 'block';
+    trigger.classList.add('open');
+    // Focus search input if present
+    const search = panel.querySelector('.fc-dropdown-search input');
+    if (search) setTimeout(() => search.focus(), 50);
+  }
+}
+
+// Close all dropdowns when clicking outside any .fc-select
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.fc-select')) {
+    document.querySelectorAll('.fc-dropdown-panel').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('.fc-select-trigger').forEach(t => t.classList.remove('open'));
+  }
+});
+
+function selectVehicle(item, selectId) {
+  const list   = item.closest('.fc-dropdown-list');
+  const select = document.getElementById(selectId);
+  const trigger = select.querySelector('.fc-select-trigger');
+  const label  = item.querySelector('.fc-dropdown-item-label').textContent.trim();
+
+  list.querySelectorAll('.fc-dropdown-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  item.classList.add('selected');
+
+  const check = buildCheck(14);
+  item.appendChild(check);
+
+  trigger.querySelector('span').textContent = label;
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  trigger.classList.remove('open');
+}
+
+function selectSimple(item, selectId) {
+  const list    = item.closest('.fc-dropdown-list');
+  const select  = document.getElementById(selectId);
+  const trigger = select.querySelector('.fc-select-trigger');
+  const label   = item.querySelector('span').textContent.trim();
+
+  list.querySelectorAll('.fc-dropdown-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  item.classList.add('selected');
+  item.appendChild(buildCheck(13));
+
+  trigger.querySelector('span').textContent = label;
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  trigger.classList.remove('open');
+}
+
+function selectPriority(item, color, label) {
+  const list   = item.closest('.fc-dropdown-list');
+  const select = item.closest('.fc-select');
+  const trigger = select.querySelector('.fc-select-trigger');
+
+  list.querySelectorAll('.fc-dropdown-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  item.classList.add('selected');
+  item.appendChild(buildCheck(14));
+
+  // Rebuild trigger content
+  const dot  = document.createElement('div');
+  dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;`;
+  const txt  = document.createElement('span');
+  txt.textContent = label;
+  const arrow = trigger.querySelector('.fc-select-arrow') || buildArrow();
+
+  trigger.innerHTML = '';
+  trigger.appendChild(dot);
+  trigger.appendChild(txt);
+  trigger.appendChild(arrow);
+  trigger.onclick = () => toggleDropdown(select.id);
+
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  trigger.classList.remove('open');
+}
+
+function selectAssignee(item, initials, name, bgColor) {
+  const list   = item.closest('.fc-dropdown-list');
+  const select = item.closest('.fc-select');
+  const trigger = select.querySelector('.fc-select-trigger');
+
+  list.querySelectorAll('.fc-dropdown-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  item.classList.add('selected');
+  item.appendChild(buildCheck(14));
+
+  const avatar = document.createElement('div');
+  avatar.className = 'fc-avatar';
+  avatar.style.background = bgColor;
+  avatar.textContent = initials;
+  const txt = document.createElement('span');
+  txt.textContent = name;
+  const arrow = buildArrow();
+
+  trigger.innerHTML = '';
+  trigger.appendChild(avatar);
+  trigger.appendChild(txt);
+  trigger.appendChild(arrow);
+  trigger.onclick = () => toggleDropdown(select.id);
+
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  trigger.classList.remove('open');
+}
+
+function filterVehicles(val) {
+  document.querySelectorAll('#vehicle-list .fc-dropdown-item').forEach(item => {
+    const text = item.querySelector('.fc-dropdown-item-label').textContent.toLowerCase();
+    item.style.display = text.includes(val.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── MULTI-SELECT ──────────────────────────────────────────────────
+function toggleMultiSelect(item, selectId) {
+  const chk = item.querySelector('.fc-multi-check');
+  const isChecked = chk.classList.contains('checked');
+  chk.classList.toggle('checked', !isChecked);
+  item.classList.toggle('selected', !isChecked);
+  updateMultiSelectLabel(selectId);
+}
+
+function updateMultiSelectLabel(selectId) {
+  const select   = document.getElementById(selectId);
+  const trigger  = select.querySelector('.fc-select-trigger');
+  const checked  = select.querySelectorAll('.fc-multi-check.checked');
+  const labelEl  = trigger.querySelector('span');
+  let   badge    = trigger.querySelector('.fc-select-count');
+  const countEl  = select.querySelector('.fc-dropdown-footer-count');
+
+  if (checked.length === 0) {
+    labelEl.textContent = 'All Statuses';
+    if (badge) badge.remove();
+    if (countEl) countEl.textContent = '0 selected';
+  } else {
+    labelEl.textContent = 'Status';
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'fc-select-count';
+      trigger.insertBefore(badge, trigger.querySelector('.fc-select-arrow'));
+    }
+    badge.textContent = checked.length;
+    if (countEl) countEl.textContent = `${checked.length} selected`;
+  }
+}
+
+function clearMultiSelect(selectId) {
+  const select = document.getElementById(selectId);
+  select.querySelectorAll('.fc-multi-check').forEach(c => c.classList.remove('checked'));
+  select.querySelectorAll('.fc-dropdown-item').forEach(i => i.classList.remove('selected'));
+  updateMultiSelectLabel(selectId);
+}
+
+function applyMultiSelect(selectId) {
+  const select = document.getElementById(selectId);
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  select.querySelector('.fc-select-trigger').classList.remove('open');
+}
+
+// ── DATE RANGE ────────────────────────────────────────────────────
+function selectDateRange(item, label) {
+  const list    = item.closest('.fc-dropdown-list');
+  const select  = item.closest('.fc-select');
+  const trigger = select.querySelector('.fc-select-trigger');
+  list.querySelectorAll('.fc-date-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  item.classList.add('selected');
+  item.appendChild(buildCheck(14));
+  trigger.querySelector('span').textContent = label;
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  trigger.classList.remove('open');
+}
+
+function applyCustomDate(selectId) {
+  const select = document.getElementById(selectId);
+  const start  = document.getElementById('date-range-start')?.value;
+  const end    = document.getElementById('date-range-end')?.value;
+  if (start && end) {
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmt = d => { const [,m,dy] = d.split('-'); return `${MONTHS[+m-1]} ${+dy}`; };
+    select.querySelector('.fc-select-trigger span').textContent = `${fmt(start)} – ${fmt(end)}`;
+  }
+  select.querySelectorAll('.fc-date-item').forEach(i => {
+    i.classList.remove('selected');
+    const chk = i.querySelector('.fc-dropdown-check');
+    if (chk) chk.remove();
+  });
+  select.querySelector('.fc-dropdown-panel').style.display = 'none';
+  select.querySelector('.fc-select-trigger').classList.remove('open');
+}
+
+// ── KEYBOARD: Escape closes any open dropdown ─────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.fc-dropdown-panel').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('.fc-select-trigger').forEach(t => t.classList.remove('open'));
+  }
+});
+
+function buildCheck(size) {
+  const ns  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'fc-dropdown-check');
+  svg.setAttribute('width', size); svg.setAttribute('height', size);
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+  const poly = document.createElementNS(ns, 'polyline');
+  poly.setAttribute('points', '20 6 9 17 4 12');
+  svg.appendChild(poly);
+  return svg;
+}
+
+function buildArrow() {
+  const ns  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'fc-select-arrow');
+  svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2');
+  const poly = document.createElementNS(ns, 'polyline');
+  poly.setAttribute('points', '6 9 12 15 18 9');
+  svg.appendChild(poly);
+  return svg;
+}
+</script>
+</body>
+</html>
