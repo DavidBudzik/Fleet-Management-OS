@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fleet Command OS — Screen Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --page-bg: #F4F4F5;
+  --card-surface: #FFFFFF;
+  --border-color: #E5E5E5;
+  --text-primary: #111111;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --r-card: 8px;
+  --image-shadow-trim: 12px;
+  --section-stack-gap: 16px;
+  --text-image-gap: 28px;
+  --header-h: 84px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-ui);
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  padding-top: var(--header-h);
+}
+
+.page-header {
+  background: var(--page-bg);
+  padding: 24px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+.page-title-block h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.page-title-block p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.screen-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.screen-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--r-card);
+  transition: color 0.15s;
+}
+.screen-nav a:hover {
+  color: var(--text-primary);
+}
+.screen-nav a.active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.canvas {
+  padding: 48px 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.screen-block {
+  margin-bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-stack-gap);
+  scroll-margin-top: calc(var(--header-h) + 12px);
+}
+.screen-block:last-child {
+  margin-bottom: 0;
+}
+.screen-label {
+  margin-bottom: 0;
+}
+.screen-number {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.screen-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+.screen-mental-model {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-top: 0;
+  max-width: 680px;
+}
+.screen-image {
+  max-width: 100%;
+  overflow: visible;
+  margin-top: var(--text-image-gap);
+}
+.screen-image img {
+  display: block;
+  width: calc(100% + (var(--image-shadow-trim) * 2));
+  margin: calc(var(--image-shadow-trim) * -1);
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(17, 17, 17, 0.12));
+}
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.inspiration-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-card);
+  padding: 8px;
+  background: var(--card-surface);
+}
+.inspiration-media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #FAFAFA;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.inspiration-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.inspiration-caption {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+.research-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.research-copy {
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-card);
+  padding: 14px;
+  background: var(--card-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.research-copy p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.research-copy p strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.research-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.research-note {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: #FCFCFC;
+}
+.research-note strong {
+  color: var(--text-primary);
+}
+/* ── Design System Section ───────────────────────────── */
+.design-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.design-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.design-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-card);
+  padding: 14px;
+  background: var(--card-surface);
+}
+.design-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.swatch {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.swatch-preview { height: 40px; }
+.swatch-info {
+  padding: 6px 8px;
+  background: #FAFAFA;
+}
+.swatch-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.swatch-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.ds-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.ds-badge-green  { background: rgba(34,197,94,0.1);  color: #16a34a; border-color: rgba(34,197,94,0.25); }
+.ds-badge-amber  { background: rgba(245,158,11,0.1); color: #b45309; border-color: rgba(245,158,11,0.25); }
+.ds-badge-red    { background: rgba(239,68,68,0.1);  color: #dc2626; border-color: rgba(239,68,68,0.25); }
+.ds-badge-navy   { background: rgba(30,58,95,0.08);  color: #1E3A5F; border-color: rgba(30,58,95,0.2); }
+.ds-badge-cyan   { background: rgba(114,227,173,0.12); color: #0d7a4f; border-color: rgba(114,227,173,0.3); }
+.badge-note {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+.type-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.type-item {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.type-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.type-meta {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.token-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.token-key { color: var(--text-secondary); }
+.token-val {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: #0d7a4f;
+}
+.theme-pair {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.theme-chip {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.theme-chip-label {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* Design approach columns */
+.approach-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: var(--text-image-gap);
+}
+.approach-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.approach-heading {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.approach-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.token-swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.token-swatch-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.token-swatch-name {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: #0d7a4f;
+}
+.token-swatch-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.font-card {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: #FAFAFA;
+}
+.font-sub {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.component-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.component-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #FAFAFA;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.component-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(114,227,173,0.12);
+  color: #0d7a4f;
+  border: 1px solid rgba(114,227,173,0.3);
+}
+
+@media (max-width: 980px) {
+  .research-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .research-notes {
+    grid-template-columns: 1fr;
+  }
+  .inspiration-grid {
+    grid-template-columns: 1fr;
+  }
+  .inspiration-media {
+    aspect-ratio: 16 / 10;
+  }
+  .design-grid {
+    grid-template-columns: 1fr;
+  }
+  .approach-grid {
+    grid-template-columns: 1fr;
+  }
+  .swatch-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Left-edge alignment normalization */
+.canvas,
+.screen-block,
+.screen-label,
+.page-title-block {
+  text-align: left;
+  align-items: flex-start;
+}
+.screen-mental-model,
+.research-copy p,
+.page-title-block p {
+  text-align: left !important;
+  margin-left: 0;
+  margin-right: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title-block">
+    <h1>Fleet Command OS — Screens</h1>
+    <p>8 sections · Dashboard + Research & Inspiration + Design System</p>
+  </div>
+  <nav class="screen-nav">
+    <a href="#s1" class="active">01 General</a>
+    <a href="#s2">02 Calendar</a>
+    <a href="#s3">03 Search</a>
+    <a href="#s4">04 Tooltip</a>
+    <a href="#s5">05 Cost</a>
+    <a href="#s6">06 Analysis</a>
+    <a href="#s7">07 Inspiration</a>
+    <a href="#s8">08 Design</a>
+  </nav>
+</div>
+
+<div class="canvas">
+
+<div class="screen-block" id="s1">
+  <div class="screen-label">
+    <div class="screen-number">Screen 01</div>
+    <div class="screen-name">Dashboard — Operations Tab · General View</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects a single pane of glass for fleet status at a glance. They can scan fleet health, KPIs, alerts, and map to understand “what’s happening now.” Actions: switch date range, open alerts, drill into map markers, navigate to vehicles or tasks. Decisions: whether to intervene (e.g., address alerts), allocate resources, or schedule maintenance based on posture and SLA indicators.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Operations Tab_General view.png" alt="Dashboard Operations Tab — General view"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s2">
+  <div class="screen-label">
+    <div class="screen-number">Screen 02</div>
+    <div class="screen-name">Dashboard — Operations Tab · Calendar</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects to control the time window for all operations data. They can pick a date range to answer “what happened in this period?” Actions: select dates, change range presets (e.g., last 7 days), apply filters. Decisions: which time slice to analyze, whether to compare periods, and how to scope reports or investigations.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Operations Tab_calendar.png" alt="Dashboard Operations Tab — Calendar"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s3">
+  <div class="screen-label">
+    <div class="screen-number">Screen 03</div>
+    <div class="screen-name">Dashboard — Operations Tab · Search Feature</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects quick access to any vehicle, driver, or entity by typing. They can jump directly to a specific asset instead of browsing. Actions: type a query, select a result, open an entity detail. Decisions: which asset to inspect first, and whether to act immediately from search results or navigate deeper.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Operations Tab_search_feature.png" alt="Dashboard Operations Tab — Search feature"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s4">
+  <div class="screen-label">
+    <div class="screen-number">Screen 04</div>
+    <div class="screen-name">Dashboard — Operations Tab · Metrics Tooltip</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects to trust the numbers by understanding how they’re calculated. The tooltip answers “why this score?” and “what’s included?” Actions: hover or click to reveal methodology. Decisions: whether to rely on the metric, adjust operations based on it, or flag methodology concerns to stakeholders.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Operations Tab_tooltip-metrics calculations method.png" alt="Dashboard Operations Tab — Metrics tooltip"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s5">
+  <div class="screen-label">
+    <div class="screen-number">Screen 05</div>
+    <div class="screen-name">Dashboard — Cost & Performance Tab</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects to see spend and efficiency in one place—“how much are we spending and how effective are we?” They can compare cost vs. performance across vehicles or time. Actions: filter by segment, drill into cost drivers, export for reporting. Decisions: where to cut costs, which assets underperform, and how to reallocate budget based on ROI or utilization.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Cost & Performance Tab .png" alt="Dashboard — Cost & Performance Tab"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s6">
+  <div class="screen-label">
+    <div class="screen-number">Screen 06</div>
+    <div class="screen-name">Dashboard — Analysis Tab</div>
+  </div>
+  <p class="screen-mental-model">Mental model: the user expects to explore trends, patterns, and insights—“what’s changing over time and why?” They can slice data by dimension and compare metrics. Actions: change date range, switch dimensions, add/remove metrics, export charts. Decisions: which trends matter, whether to escalate issues, and what strategic changes to propose based on evidence.</p>
+  <div class="screen-image">
+    <img src="Dashboard — Analysis Tab .png" alt="Dashboard — Analysis Tab"/>
+  </div>
+</div>
+
+<div class="screen-block" id="s7">
+  <div class="screen-label">
+    <div class="screen-number">Section 07</div>
+    <div class="screen-name">Research & Inspiration</div>
+  </div>
+  <div class="research-layout">
+    <div class="research-copy">
+      <p>Four fleet management platforms were studied before any design decisions were made: <strong>myGEOTAB</strong>, <strong>Verizon Reveal+</strong>, <strong>Fleetio</strong>, and <strong>Samsara / Motive</strong>. From myGEOTAB, the tab-based dashboard structure and unified tracking surface were carried forward; from Fleetio, the card-based KPI layout and clean table density.</p>
+      <p>Samsara and Motive established the industry-standard traffic-light status semantics (<strong>green / amber / red</strong>) and the anomaly-first approach - surfacing what needs attention rather than displaying all data equally. Verizon Reveal+ served as the anti-pattern: a wall of equal-weight bar charts in competing colors, demonstrating data without hierarchy.</p>
+      <p>What was deliberately left behind across all competitors was the generic light-mode enterprise aesthetic, fragmented module structures across separate apps, and the passive "here is your data" tone that shifts resolution burden to the operator.</p>
+      <p>The <strong>$27B fleet management market</strong> is dominated by established platforms that are strong on data collection but weak on decision clarity. Fleet Command OS is positioned in that gap - between surfacing information and resolving it.</p>
+
+      <div class="research-notes">
+        <div class="research-note"><strong>Carried Forward</strong><br/>Tab-based navigation, KPI cards, unified tracking surface.</div>
+        <div class="research-note"><strong>Core UX Constraint</strong><br/>Anomaly-first hierarchy using consistent traffic-light status semantics.</div>
+        <div class="research-note"><strong>Anti-Pattern</strong><br/>Equal visual weight across every chart, without clear decision priority.</div>
+        <div class="research-note"><strong>Deliberately Avoided</strong><br/>Fragmented modules, generic enterprise light-mode, passive reporting tone.</div>
+      </div>
+    </div>
+
+    <div class="inspiration-grid">
+      <div class="inspiration-card">
+        <div class="inspiration-media">
+          <img src="inspiration/image 1.png" alt="GEOTAB inspiration screen"/>
+        </div>
+        <div class="inspiration-caption">GEOTAB / myGEOTAB</div>
+      </div>
+      <div class="inspiration-card">
+        <div class="inspiration-media">
+          <img src="inspiration/image 2.png" alt="Fleetio inspiration screen"/>
+        </div>
+        <div class="inspiration-caption">FLEETIO</div>
+      </div>
+      <div class="inspiration-card">
+        <div class="inspiration-media">
+          <img src="inspiration/image 4.png" alt="Samsara or Motive inspiration screen"/>
+        </div>
+        <div class="inspiration-caption">SAMSARA / MOTIVE</div>
+      </div>
+      <div class="inspiration-card">
+        <div class="inspiration-media">
+          <img src="inspiration/image 5.png" alt="Verizon Reveal inspiration screen"/>
+        </div>
+        <div class="inspiration-caption">VERIZON REVEAL+</div>
+      </div>
+    </div>
+  </div>
+
+<div class="screen-block" id="s8">
+  <div class="screen-label">
+    <div class="screen-number">Section 08</div>
+    <div class="screen-name">Design System v1.2</div>
+  </div>
+  <p class="screen-mental-model">A token-driven design language with consistent color semantics, typographic hierarchy, and component patterns across light and dark modes. Every value — color, spacing, radius, shadow — is a CSS custom property. No hardcoded values anywhere.</p>
+
+  <!-- Row 1: Color + Badges / Typography + Tokens -->
+  <div class="design-grid" style="margin-top: var(--text-image-gap)">
+    <div class="design-col">
+      <div class="design-card">
+        <div class="design-card-label">Color Palette</div>
+        <div class="swatch-grid">
+          <div class="swatch"><div class="swatch-preview" style="background:#1E3A5F"></div><div class="swatch-info"><div class="swatch-name">Fleet Blue</div><div class="swatch-hex">#1E3A5F</div></div></div>
+          <div class="swatch"><div class="swatch-preview" style="background:#72e3ad"></div><div class="swatch-info"><div class="swatch-name">Signal Cyan</div><div class="swatch-hex">#72e3ad</div></div></div>
+          <div class="swatch"><div class="swatch-preview" style="background:#0F1E33"></div><div class="swatch-info"><div class="swatch-name">Deep Navy</div><div class="swatch-hex">#0F1E33</div></div></div>
+          <div class="swatch"><div class="swatch-preview" style="background:#22C55E"></div><div class="swatch-info"><div class="swatch-name">Status Green</div><div class="swatch-hex">#22C55E</div></div></div>
+          <div class="swatch"><div class="swatch-preview" style="background:#F59E0B"></div><div class="swatch-info"><div class="swatch-name">Alert Amber</div><div class="swatch-hex">#F59E0B</div></div></div>
+          <div class="swatch"><div class="swatch-preview" style="background:#EF4444"></div><div class="swatch-info"><div class="swatch-name">Critical Red</div><div class="swatch-hex">#EF4444</div></div></div>
+        </div>
+      </div>
+      <div class="design-card">
+        <div class="design-card-label">Status Badges</div>
+        <div class="badge-row">
+          <span class="ds-badge ds-badge-green">Active</span>
+          <span class="ds-badge ds-badge-amber">In Shop</span>
+          <span class="ds-badge ds-badge-red">Out of Service</span>
+          <span class="ds-badge ds-badge-navy">Inactive</span>
+          <span class="ds-badge ds-badge-cyan">En Route</span>
+        </div>
+        <div class="badge-note">Color + dot indicator — never color alone (WCAG compliant)</div>
+      </div>
+    </div>
+
+    <div class="design-col">
+      <div class="design-card">
+        <div class="design-card-label">Typography Scale</div>
+        <div class="type-row">
+          <div class="type-item">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;line-height:1.1;color:var(--text-primary)">Display H1</div>
+            <div class="type-meta">Space Grotesk · 700 · Display</div>
+          </div>
+          <div class="type-item">
+            <div style="font-family:'Inter',sans-serif;font-size:15px;font-weight:600;color:var(--text-primary)">Section Heading</div>
+            <div class="type-meta">Inter · 600 · 16px</div>
+          </div>
+          <div class="type-item">
+            <div style="font-family:'Inter',sans-serif;font-size:13px;color:var(--text-primary)">Body text for descriptions and data labels in the UI</div>
+            <div class="type-meta">Inter · 400 · 13px</div>
+          </div>
+          <div class="type-item">
+            <div style="font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;color:#0d7a4f">VH-0034 · 124,502 mi · 64%</div>
+            <div class="type-meta">JetBrains Mono · Data / IDs</div>
+          </div>
+        </div>
+      </div>
+      <div class="design-card">
+        <div class="design-card-label">Design Tokens</div>
+        <div class="token-list">
+          <div class="token-row"><span class="token-key">Spacing scale</span><span class="token-val">4 · 8 · 16 · 24 · 32 · 48px</span></div>
+          <div class="token-row"><span class="token-key">Border radius</span><span class="token-val">card:12px · btn:8px · badge:20px</span></div>
+          <div class="token-row"><span class="token-key">Transitions</span><span class="token-val">140ms · 200ms · 280ms</span></div>
+          <div class="token-row"><span class="token-key">Sidebar width</span><span class="token-val">220px · collapsed: 56px</span></div>
+          <div class="token-row"><span class="token-key">Topbar height</span><span class="token-val">56px fixed</span></div>
+        </div>
+      </div>
+      <div class="design-card" style="border-color:rgba(114,227,173,0.3);background:rgba(114,227,173,0.03)">
+        <div class="design-card-label" style="color:#0d7a4f">Theme Support</div>
+        <div class="theme-pair">
+          <div class="theme-chip" style="background:#F4F4F5;border-color:#E0E0E0">
+            <div class="theme-chip-label" style="color:#111">☀ Light Mode</div>
+            <div style="color:#6B7280">page-bg: #F4F4F5<br>card: #FFFFFF<br>border: #E0E0E0</div>
+          </div>
+          <div class="theme-chip" style="background:#121212;border-color:#292929">
+            <div class="theme-chip-label" style="color:#F0F0F0">🌙 Dark Mode</div>
+            <div style="color:#9A9A9A">page-bg: #121212<br>card: #171717<br>border: #292929</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: How It Was Built -->
+  <div class="approach-grid">
+    <div class="approach-col">
+      <div class="approach-heading">Tokens First</div>
+      <p class="approach-body">Everything — colors, spacing, radius, shadows — is defined as a CSS custom property. No hardcoded values anywhere. This makes global changes a one-line edit.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div class="token-swatch-row">
+          <div class="token-swatch-dot" style="background:#1E3A5F"></div>
+          <div><div class="token-swatch-name">--fleet-blue</div><div class="token-swatch-desc">Authority &amp; structure</div></div>
+        </div>
+        <div class="token-swatch-row">
+          <div class="token-swatch-dot" style="background:#72e3ad"></div>
+          <div><div class="token-swatch-name">--signal-cyan</div><div class="token-swatch-desc">Active states &amp; AI</div></div>
+        </div>
+        <div class="token-swatch-row">
+          <div class="token-swatch-dot" style="background:linear-gradient(135deg,#22C55E 33%,#F59E0B 33% 66%,#EF4444 66%)"></div>
+          <div><div class="token-swatch-name">Status trio</div><div class="token-swatch-desc">Green / amber / red</div></div>
+        </div>
+        <div class="token-swatch-row">
+          <div class="token-swatch-dot" style="background:#F4F4F5;border:1px solid #E0E0E0"></div>
+          <div><div class="token-swatch-name">Surface stack</div><div class="token-swatch-desc">3-layer depth system</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="approach-col">
+      <div class="approach-heading">Three Typefaces, Three Jobs</div>
+      <p class="approach-body">Each font has a specific role. Mixing them purposefully creates hierarchy without relying on size alone.</p>
+      <div class="font-card">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text-primary)">Space Grotesk</div>
+        <div class="font-sub">Display — slide titles, section headings</div>
+      </div>
+      <div class="font-card">
+        <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:500;color:var(--text-primary)">Inter</div>
+        <div class="font-sub">UI — labels, body, buttons, all controls</div>
+      </div>
+      <div class="font-card">
+        <div style="font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;font-weight:500;color:#0d7a4f">JetBrains Mono</div>
+        <div class="font-sub">Data — KPI values, IDs, counters, tags</div>
+      </div>
+    </div>
+
+    <div class="approach-col">
+      <div class="approach-heading">Dark-First, Component-Driven</div>
+      <p class="approach-body">Designed dark-first — a deliberate choice for operational contexts where operators spend hours at screens. Light mode was added as a secondary variant. Every component is token-bound.</p>
+      <div class="component-list">
+        <div class="component-row"><span>KPI cards</span><span class="component-tag">token-bound</span></div>
+        <div class="component-row"><span>Status badges</span><span class="component-tag">token-bound</span></div>
+        <div class="component-row"><span>Data tables</span><span class="component-tag">token-bound</span></div>
+        <div class="component-row"><span>Map overlays</span><span class="component-tag">token-bound</span></div>
+        <div class="component-row"><span>Slide-in panels</span><span class="component-tag">token-bound</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+(function() {
+  const sections = document.querySelectorAll('.screen-block');
+  const navLinks = document.querySelectorAll('.screen-nav a');
+
+  function updateActive() {
+    const scrollY = window.scrollY;
+    let current = navLinks[0];
+    sections.forEach((section, i) => {
+      const top = section.offsetTop - 100;
+      if (scrollY >= top) {
+        current = navLinks[i];
+      }
+    });
+    navLinks.forEach(a => a.classList.remove('active'));
+    if (current) current.classList.add('active');
+  }
+
+  window.addEventListener('scroll', updateActive);
+  window.addEventListener('load', updateActive);
+})();
+</script>
+</body>
+</html>
